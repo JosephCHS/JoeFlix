@@ -24,3 +24,7 @@ variable "api_url" {
     description = "Adress to reach proxmox's GUI, ID and IP match"
     default = "https://192.168.1.12:8006/api2/json"
 }
+variable "gateway" {
+  description = "The network gateway ultra freebox"
+  default     = "192.168.1.254"
+}
