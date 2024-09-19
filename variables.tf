@@ -10,6 +10,30 @@ variable "api_url" {
     default = "https://192.168.1.12:8006/api2/json"
 }
 
+variable "network" {
+  description = "Network configuration, network interface name and IP"
+  type = object({
+    name = string
+    bridge = string
+    ip = string
+    gw = string
+    firewall = bool
+  })
+  default = {
+    name = "eth0"
+    bridge = "vmbr0"
+    ip = "192.168.1.1/24"
+    gw = "192.168.1.254"
+    firewall = false
+  }
+}
+
+variable "instance_number" {
+  description = "Unique ID for the container used for its ID and the last number of its IP address"
+  type = number
+  default = 101
+}
+
 variable "plex_container_id" {
   description = "Unique ID for the container. Also used as the last octet of the IP address."
   type = number
@@ -94,28 +118,44 @@ variable "qbittorrent_container_id" {
   default = 114
 }
 
-variable "gotify_container_id" {
+variable "homepage_container_id" {
   description = "Unique ID for the container. Also used as the last octet of the IP address."
   type = number
   default = 115
 }
 
+variable "gotify_container_id" {
+  description = "Unique ID for the container. Also used as the last octet of the IP address."
+  type = number
+  default = 116
+}
+
+variable "cloudflared_container_id" {
+  description = "Unique ID for the container. Also used as the last octet of the IP address."
+  type = number
+  default = 117
+}
+
 variable "token_secret" {
   description = "A secret token used by Terraform Provider to reach JoeFlix Proxmox."
   type = string
+  sensitive   = true
 }
 
 variable "token_id" {
   description = "Token ID used by Terraform Provider to reach JoeFlix Proxmox."
   type = string
+  sensitive   = true
 }
 
 variable "password_lxc" {
   description = "Password for private LXC container which are not exposed to Internet."
   type = string
+  sensitive = true
 }
 
 variable "password_lxc_plex" {
   description = "Password for public LXC container which are exposed to Internet."
   type = string
+  sensitive = true
 }

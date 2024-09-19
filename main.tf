@@ -1,8 +1,23 @@
 module "plex_lxc" {
   source = "./lxc"
-  vmid = var.plex_container_id
+  providers = {
+    proxmox = proxmox
+  }
+  instance_number = var.plex_container_id
   hostname = "plex"
-  rootfs = {size = "500G"}
+  rootfs = {
+    storage = "local-zfs"
+    size = "500G"
+  }
+  mountpoint = {
+    mp = "/shared"
+    storage = "media"
+    volume = "/mnt/hdd14/data/media/"
+    size = "0G"
+    slot = "0"
+    key = 0
+  }
+  password_lxc = var.password_lxc_plex
   cpu_cores = 4
   memory = 30000
   network = var.network
@@ -10,10 +25,25 @@ module "plex_lxc" {
 }
 
 module "radarr_lxc" {
-  source = "./lxc" 
-  vmid = var.radarr_container_id
+  source = "./lxc"
+  providers = {
+    proxmox = proxmox
+  }
+  instance_number = var.radarr_container_id
   hostname = "radarr"
-  disk_size = "10G"
+  rootfs = {
+    storage = "local-zfs"
+    size = "10G"
+  }
+  mountpoint = {
+    mp = "/shared"
+    storage = "media"
+    volume = "/mnt/hdd14/data/"
+    size = "0G"
+    slot = "0"
+    key = 0
+  }
+  password_lxc = var.password_lxc
   cpu_cores = 1
   memory = 2048
   network = var.network
@@ -22,9 +52,16 @@ module "radarr_lxc" {
 
 module "cloudflared_lxc" {
   source = "./lxc"
-  vmid = 10
+  providers = {
+    proxmox = proxmox
+  }
+  instance_number = var.cloudflared_container_id
   hostname = "cloudflared"
-  disk_size = "2G"
+  rootfs = {
+    storage = "local-zfs"
+    size = "2G"
+  }
+  password_lxc = var.password_lxc
   cpu_cores = "1"
   memory = 512
   network = var.network
@@ -33,9 +70,16 @@ module "cloudflared_lxc" {
 
 module "flaresolverr_lxc" {
   source = "./lxc"
-  vmid = 10
+  providers = {
+    proxmox = proxmox
+  }  
+  instance_number = var.flaresolverr_container_id
   hostname = "flaresolverr"
-  disk_size = "4G"
+  rootfs = {
+    storage = "local-zfs"
+    size = "4G"
+  }
+  password_lxc = var.password_lxc
   cpu_cores = "2"
   memory = 2048
   network = var.network
@@ -44,9 +88,24 @@ module "flaresolverr_lxc" {
 
 module "bazarr_lxc" {
   source = "./lxc"
-  vmid = 10
+  providers = {
+    proxmox = proxmox
+  }  
+  instance_number = var.bazarr_container_id
   hostname = "bazarr"
-  disk_size = "4G"
+  rootfs = {
+    storage = "local-zfs"
+    size = "4G"
+  }
+  mountpoint = {
+    mp = "/shared"
+    storage = "media"
+    volume = "/mnt/hdd14/data/"
+    size = "0G"
+    slot = "0"
+    key = 0
+  }
+  password_lxc = var.password_lxc
   cpu_cores = "2"
   memory = 1024
   network = var.network
@@ -55,9 +114,24 @@ module "bazarr_lxc" {
 
 module "calibre_web_lxc" {
   source = "./lxc"
-  vmid = 10
+  providers = {
+    proxmox = proxmox
+  }
+  instance_number = var.calibre_web_container_id
   hostname = "calibre-web"
-  disk_size = "4G"
+  rootfs = {
+    storage = "local-zfs"
+    size = "4G"
+  }
+  mountpoint = {
+    mp = "/shared"
+    storage = "media"
+    volume = "/mnt/hdd14/data/media/books"
+    size = "0G"
+    slot = "0"
+    key = 0
+  }
+  password_lxc = var.password_lxc
   cpu_cores = "2"
   memory = 2048
   network = var.network
@@ -66,9 +140,24 @@ module "calibre_web_lxc" {
 
 module "lidarr_lxc" {
   source = "./lxc"
-  vmid = 10
+  providers = {
+    proxmox = proxmox
+  }  
+  instance_number = var.lidarr_container_id
   hostname = "lidarr"
-  disk_size = "4G"
+  rootfs = {
+    storage = "local-zfs"
+    size = "4G"
+  }
+  mountpoint = {
+    mp = "/shared"
+    storage = "media"
+    volume = "/mnt/hdd14/data/"
+    size = "0G"
+    slot = "0"
+    key = 0
+  }
+  password_lxc = var.password_lxc
   cpu_cores = "2"
   memory = 1024
   network = var.network
@@ -77,9 +166,16 @@ module "lidarr_lxc" {
 
 module "overseerr_lxc" {
   source = "./lxc"
-  vmid = 10
+  providers = {
+    proxmox = proxmox
+  } 
+  instance_number = var.overseerr_container_id
   hostname = "overseerr"
-  disk_size = "8G"
+  rootfs = {
+    storage = "local-zfs"
+    size = "8G"
+  }
+  password_lxc = var.password_lxc
   cpu_cores = "3"
   memory = 4096
   network = var.network
@@ -88,9 +184,16 @@ module "overseerr_lxc" {
 
 module "prowlarr_lxc" {
   source = "./lxc"
-  vmid = 10
+  providers = {
+    proxmox = proxmox
+  } 
+  instance_number = var.prowlarr_container_id
   hostname = "prowlarr"
-  disk_size = "4G"
+  rootfs = {
+    storage = "local-zfs"
+    size = "4G"
+  }
+  password_lxc = var.password_lxc
   cpu_cores = "2"
   memory = 2048
   network = var.network
@@ -99,9 +202,24 @@ module "prowlarr_lxc" {
 
 module "readarr_lxc" {
   source = "./lxc"
-  vmid = 10
+  providers = {
+    proxmox = proxmox
+  }  
+  instance_number = var.readarr_container_id
   hostname = "readarr"
-  disk_size = "4G"
+  rootfs = {
+    storage = "local-zfs"
+    size = "4G"
+  }
+  mountpoint = {
+    mp = "/shared"
+    storage = "media"
+    volume = "/mnt/hdd14/data/"
+    size = "0G"
+    slot = "0"
+    key = 0
+  }
+  password_lxc = var.password_lxc
   cpu_cores = "2"
   memory = 2048
   network = var.network
@@ -110,9 +228,24 @@ module "readarr_lxc" {
 
 module "sonarr_lxc" {
   source = "./lxc"
-  vmid = 10
+  providers = {
+    proxmox = proxmox
+  } 
+  instance_number = var.sonarr_container_id
   hostname = "sonarr"
-  disk_size = "5G"
+  rootfs = {
+    storage = "local-zfs"
+    size = "5G"
+  }
+  mountpoint = {
+    mp = "/shared"
+    storage = "media"
+    volume = "/mnt/hdd14/data/"
+    size = "0G"
+    slot = "0"
+    key = 0
+  }
+  password_lxc = var.password_lxc
   cpu_cores = "2"
   memory = 2048
   network = var.network 
@@ -121,9 +254,16 @@ module "sonarr_lxc" {
 
 module "tautulli_lxc" {
   source = "./lxc"
-  vmid = 10
+  providers = {
+    proxmox = proxmox
+  }
+  instance_number = var.tautulli_container_id
   hostname = "tautulli"
-  disk_size = "4G"
+  rootfs = {
+    storage = "local-zfs"
+    size = "4G"
+  }
+  password_lxc = var.password_lxc
   cpu_cores = "2"
   memory = 1024
   network = var.network
@@ -132,9 +272,24 @@ module "tautulli_lxc" {
 
 module "kavita_lxc" {
   source = "./lxc"
-  vmid = 10
+  providers = {
+    proxmox = proxmox
+  } 
+  instance_number = var.kavita_container_id
   hostname = "kavita"
-  disk_size = "10G"
+  rootfs = {
+    storage = "local-zfs"
+    size = "10G"
+  }
+  mountpoint = {
+    mp = "/shared"
+    storage = "media"
+    volume = "/mnt/hdd14/data/media/books"
+    size = "0G"
+    slot = "0"
+    key = 0
+  }  
+  password_lxc = var.password_lxc
   cpu_cores = "2"
   memory = 4096
   network = var.network
@@ -143,31 +298,42 @@ module "kavita_lxc" {
 
 module "homepage_lxc" {
   source = "./lxc"
-  vmid = 10
+  providers = {
+    proxmox = proxmox
+  } 
+  instance_number = var.homepage_container_id
   hostname = "homepage"
-  disk_size = "3G"
+  rootfs = {
+    storage = "local-zfs"
+    size = "3G"
+  }
+  password_lxc = var.password_lxc
   cpu_cores = "1"
   memory = 1024
   network = var.network 
   tags = "lxc;dashboard"
 }
 
-module "jackett_lxc" {
-  source = "./lxc"
-  vmid = 10
-  hostname = "jackett"
-  disk_size = "2G"
-  cpu_cores = "1"
-  memory = 1024
-  network = var.network 
-  tags = "lxc;media"
-}
-
 module "qbittorrent_lxc" {
   source = "./lxc"
-  vmid = 10
+  providers = {
+    proxmox = proxmox
+  }
+  instance_number = var.qbittorrent_container_id
   hostname = "qbittorrent"
-  disk_size = "10G"
+  rootfs = {
+    storage = "local-zfs"
+    size = "10G"
+  }
+  mountpoint = {
+    mp = "/shared"
+    storage = "media"
+    volume = "/mnt/hdd14/data/torrents"
+    size = "0G"
+    slot = "0"
+    key = 0
+  }
+  password_lxc = var.password_lxc
   cpu_cores = "3"
   memory = 6000
   network = var.network 
@@ -175,9 +341,17 @@ module "qbittorrent_lxc" {
 }
 
 module "gotify_lxc" {
-  source = "./tteck_lxc_module"
+  source = "./lxc"
+  providers = {
+    proxmox = proxmox
+  }
+  instance_number = var.gotify_container_id
   hostname = "gotify"
-  disk_size = "2G"
+  rootfs = {
+    storage = "local-zfs"
+    size = "2G"
+  }
+  password_lxc = var.password_lxc
   cpu_cores = 1
   memory = 1024
   network = var.network

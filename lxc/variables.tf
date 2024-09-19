@@ -1,6 +1,7 @@
 variable "instance_number" {
   description = "Unique ID for the container used for its ID and the last number of its IP address"
   type = number
+  default = 101
 }
 
 variable "cpu_cores" {
@@ -13,11 +14,6 @@ variable "description" {
   description = "Sets the container description seen in the web interface."
   type = string
   default = "LXC container for JoeFlix"
-}
-
-variable "disk_size" {
-  description = "Disk size for the container"
-  type = string
 }
 
 variable "dns_servers" {
@@ -45,24 +41,14 @@ variable "mountpoint" {
     volume = string
     slot = string
     key = number
-    acl = boolean
-    backup = boolean
-    quota = boolean
-    replicate = boolean
-    shared = boolean
   })
   default = {
     mp = "/shared"
-    storage = "/mnt/hdd14/media"
-    volume = "/mnt/hdd14/media"
+    storage = "media"
+    volume = "/mnt/hdd14/data"
     size = "0"
     slot = "1"
     key = 1
-    acl = false
-    backup = false
-    quota = false
-    replicate = false
-    shared = false
   }
 }
 
@@ -73,21 +59,26 @@ variable "network" {
     bridge = string
     ip = string
     gw = string
-    firewall = boolean
+    firewall = bool
   })
   default = {
     name = "eth0"
     bridge = "vmbr0"
-    ip = "192.168.1.999/24"
+    ip = "192.168.1.1/24"
     gw = "192.168.1.254"
     firewall = false
   }
 }
 
 variable "onboot" {
-  description = "A boolean that determines if the container will start on boot."
-  type = boolean
+  description = "A bool that determines if the container will start on boot."
+  type = bool
   default = true
+}
+
+variable "password_lxc" {
+  description = "Password for private LXC container which are not exposed to Internet."
+  type = string
 }
 
 variable "rootfs" {
@@ -97,9 +88,15 @@ variable "rootfs" {
     size = string
   })
   default = {
-    name = "local-zfs"
+    storage = "local-zfs"
     size = "5G"
   }
+}
+
+variable "start" {
+  description = " A boolean that determines if the container is started after creation."
+  type = bool
+  default = true
 }
 
 variable "swap" {
@@ -109,9 +106,9 @@ variable "swap" {
 }
 
 variable "tags" {
-  description = "Tags of the container, semicolon-delimited (e.g. "terraform;test"). This is only meta information."
+  description = "Tags of the container, semicolon-delimited. This is only meta information."
   type = string
-  default = "LXC"
+  default = "LXC;JoeFlix"
 }
 
 variable "target_node" {
@@ -128,6 +125,6 @@ variable "template" {
 
 variable "unprivileged" {
   description = "Set the global right for the LXC container"
-  type = boolean
+  type = bool
   default = true
 }
