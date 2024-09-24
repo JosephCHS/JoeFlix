@@ -1,0 +1,49 @@
+- name: Install prerequisites for qBittorrent
+  ansible.builtin.apt:
+    name:
+      - qbittorrent-nox
+    state: present
+    update_cache: true
+
+- name: Ensure qbittorrent user and group with UID and GID 1000 exist
+  ansible.builtin.user:
+    name: qbittorrent
+    uid: 1000
+    group: qbittorrent
+    create_home: false
+    shell: /usr/sbin/nologin
+
+- name: Ensure qbittorrent group with GID 1000 exists
+  ansible.builtin.group:
+    name: qbittorrent
+    gid: 1000
+    state: present
+
+- name: Create systemd service for qBittorrent
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/qbittorrent.service
+    mode: '755'
+    content: |
+      [Unit]
+      Description=qBittorrent Daemon
+      After=network.target
+
+      [Service]
+      ExecStart=/usr/bin/qbittorrent-nox
+      User=qbittorrent
+      Group=qbittorrent
+      Restart=on-failure
+      LimitNOFILE=32768
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: Reload systemd to apply changes
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Enable and start qBittorrent service
+  ansible.builtin.systemd:
+    name: qbittorrent
+    enabled: true
+    state: started

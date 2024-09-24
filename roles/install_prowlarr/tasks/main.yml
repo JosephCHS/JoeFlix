@@ -1,0 +1,67 @@
+- name: Install prerequisites for Prowlarr
+  ansible.builtin.apt:
+    name:
+      - curl
+      - libmono-cil-dev
+      - mediainfo
+      - sqlite3
+    state: present
+    update_cache: true
+
+- name: Ensure prowlarr user and group with UID and GID 1000 exist
+  ansible.builtin.user:
+    name: prowlarr
+    uid: 1000
+    group: prowlarr
+    create_home: false
+    shell: /usr/sbin/nologin
+
+- name: Ensure prowlarr group with GID 1000 exists
+  ansible.builtin.group:
+    name: prowlarr
+    gid: 1000
+    state: present
+
+- name: Download Prowlarr
+  ansible.builtin.get_url:
+    url: https://services.prowlarr.tv/v1/download/main/latest?version=4&os=linux&arch=x64
+    dest: /opt/prowlarr.tar.gz
+    mode: '755'
+
+- name: Extract Prowlarr
+  ansible.builtin.unarchive:
+    src: /opt/prowlarr.tar.gz
+    dest: /opt/prowlarr
+    remote_src: true
+    owner: prowlarr
+    group: prowlarr
+    mode: '755'
+
+- name: Create systemd service for Prowlarr
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/prowlarr.service
+    mode: '644'
+    content: |
+      [Unit]
+      Description=Prowlarr Daemon
+      After=network.target
+
+      [Service]
+      ExecStart=/opt/Prowlarr/Prowlarr -nobrowser -data=/opt/Prowlarr
+      User=prowlarr
+      Group=prowlarr
+      Restart=on-failure
+      LimitNOFILE=32768
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: Reload systemd to apply changes
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Enable and start Prowlarr service
+  ansible.builtin.systemd:
+    name: prowlarr
+    enabled: true
+    state: started

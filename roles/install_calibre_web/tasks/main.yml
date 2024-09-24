@@ -1,0 +1,78 @@
+- name: Install prerequisites for Calibre-Web
+  ansible.builtin.apt:
+    name:
+      - python3
+      - python3-pip
+      - python3-setuptools
+      - python3-venv
+      - git
+      - curl
+      - http-Auth
+    state: present
+    update_cache: true
+
+- name: Ensure calibre_web user and group with UID and GID 1000 exist
+  ansible.builtin.user:
+    name: calibre_web
+    uid: 1000
+    group: calibre_web
+    groups: joeflix
+    state: present
+    create_home: false
+    shell: /usr/sbin/nologin
+
+- name: Ensure calibre_web group with GID 1000 exists
+  ansible.builtin.group:
+    name: calibre_web
+    gid: 1000
+    state: present
+
+- name: Download Calibre-Web
+  ansible.builtin.git:
+    repo: https://github.com/janeczku/calibre-web.git
+    dest: /opt/calibre-web
+    version: master
+
+- name: Install Python requirements for Calibre-Web
+  ansible.builtin.pip:
+    requirements: /opt/calibre-web/requirements.txt
+    virtualenv: /opt/calibre-web/venv
+    virtualenv_command: python3 -m venv
+    virtualenv_python: python3
+
+- name: Ensure user and group has correct rights over extracted files
+  ansible.builtin.file:
+    path: /opt/calibre-web
+    owner: calibre_web
+    group: calibre_web
+    mode: '755'
+    recurse: true
+
+- name: Create systemd service for Calibre-Web
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/calibre_web.service
+    mode: '644'
+    content: |
+      [Unit]
+      Description=Calibre-Web Daemon
+      After=network.target
+
+      [Service]
+      ExecStart=/opt/calibre-web/venv/bin/python /opt/calibre-web/cps.py
+      User=calibre_web
+      Group=calibre_web
+      Restart=on-failure
+      LimitNOFILE=32768
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: Reload systemd to apply changes
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Enable and start Calibre-Web service
+  ansible.builtin.systemd:
+    name: calibre_web
+    enabled: true
+    state: started

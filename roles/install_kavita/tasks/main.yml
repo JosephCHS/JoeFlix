@@ -1,0 +1,75 @@
+- name: Install prerequisites for Kavita
+  ansible.builtin.apt:
+    name:
+      - wget
+      - unzip
+    state: present
+    update_cache: true
+
+- name: Ensure kavita user and group with UID and GID 1000 exist
+  ansible.builtin.user:
+    name: kavita
+    uid: 1000
+    group: kavita
+    groups: joeflix
+    state: present
+    create_home: false
+    shell: /usr/sbin/nologin
+
+- name: Ensure kavita group with GID 1000 exists
+  ansible.builtin.group:
+    name: kavita
+    gid: 1000
+    state: present
+
+- name: Download Kavita
+  ansible.builtin.get_url:
+    url: https://github.com/Kareadita/Kavita/releases/download/v0.8.3.2/kavita-linux-x64.tar.gz
+    dest: /opt/kavita.zip
+    mode: '755'
+
+- name: Extract Kavita
+  ansible.builtin.unarchive:
+    src: /opt/kavita.zip
+    dest: /opt/kavita
+    remote_src: true
+    mode: '755'
+    owner: kavita
+    group: kavita
+
+- name: Ensure user and group has correct rights over extracted files
+  ansible.builtin.file:
+    path: /opt/kavita
+    owner: kavita
+    group: kavita
+    mode: '755'
+    recurse: true
+
+- name: Create systemd service for Kavita
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/kavita.service
+    mode: '644'
+    content: |
+      [Unit]
+      Description=Kavita Daemon
+      After=network.target
+
+      [Service]
+      ExecStart=/opt/kavita/kavita
+      User=kavita
+      Group=kavita
+      Restart=on-failure
+      LimitNOFILE=32768
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: Reload systemd to apply changes
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Enable and start Kavita service
+  ansible.builtin.systemd:
+    name: kavita
+    enabled: true
+    state: started

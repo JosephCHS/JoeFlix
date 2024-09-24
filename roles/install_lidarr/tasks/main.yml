@@ -1,0 +1,76 @@
+- name: Install prerequisites for Lidarr
+  ansible.builtin.apt:
+    name:
+      - curl
+      - libmono-cil-dev
+      - mediainfo
+      - sqlite3
+    state: present
+    update_cache: true
+
+- name: Ensure lidarr user and group with UID and GID 1000 exist
+  ansible.builtin.user:
+    name: lidarr
+    uid: 1000
+    group: lidarr
+    groups: joeflix
+    create_home: false
+    shell: /usr/sbin/nologin
+
+- name: Ensure lidarr group with GID 1000 exists
+  ansible.builtin.group:
+    name: lidarr
+    gid: 1000
+    state: present
+
+- name: Download Lidarr
+  ansible.builtin.get_url:
+    url: http://lidarr.servarr.com/v1/update/master/updatefile?os=linux&runtime=netcore&arch=x64
+    dest: /opt/lidarr.tar.gz
+    mode: '755'
+
+- name: Extract Lidarr
+  ansible.builtin.unarchive:
+    src: /opt/lidarr.tar.gz
+    dest: /opt/lidarr
+    remote_src: true
+    mode: '755'
+    owner: lidarr
+    group: lidarr
+
+- name: Ensure user and group has correct rights over extracted files
+  ansible.builtin.file:
+    path: /opt/lidarr
+    owner: lidarr
+    group: lidarr
+    mode: '755'
+    recurse: true
+
+- name: Create systemd service for Lidarr
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/lidarr.service
+    mode: '644'
+    content: |
+      [Unit]
+      Description=Lidarr Daemon
+      After=network.target
+
+      [Service]
+      ExecStart=/opt/Lidarr/Lidarr -nobrowser -data=/opt/Lidarr
+      User=lidarr
+      Group=lidarr
+      Restart=on-failure
+      LimitNOFILE=32768
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: Reload systemd to apply changes
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Enable and start Lidarr service
+  ansible.builtin.systemd:
+    name: lidarr
+    enabled: true
+    state: started

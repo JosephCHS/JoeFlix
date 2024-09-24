@@ -1,0 +1,84 @@
+- name: Install prerequisites for Readarr
+  ansible.builtin.apt:
+    name:
+      - curl
+      - libmono-cil-dev
+      - mediainfo
+      - sqlite3
+    update_cache: true
+    state: present
+
+- name: Download and extract Readarr
+  ansible.builtin.get_url:
+    url: "https://github.com/Readarr/Readarr/releases/download/v0.3.32.2587/Readarr.develop.0.3.32.2587.linux-core-x64.tar.gz"
+    dest: /opt/readarr.tar.gz
+    mode: '755'
+
+- name: Extract Readarr
+  ansible.builtin.unarchive:
+    src: /opt/readarr.tar.gz
+    dest: /opt/
+    remote_src: true
+    mode: '755'
+
+- name: Create Readarr user with UID 1000 and GID 1000
+  ansible.builtin.user:
+    name: readarr
+    uid: 1000
+    group: 1000
+    shell: /usr/sbin/nologin
+    create_home: false
+    system: true
+
+- name: Ensure bazarr group with GID 1000 exists
+  ansible.builtin.group:
+    name: bazarr
+    gid: 1000
+    state: present
+
+- name: Create media directory for Readarr
+  ansible.builtin.file:
+    path: /shared/books
+    state: directory
+    owner: readarr
+    group: readarr
+    mode: '755'
+
+- name: Ensure user and group permissions for Readarr files
+  ansible.builtin.file:
+    path: /opt/Readarr
+    owner: readarr
+    group: readarr
+    mode: '755'
+    recurse: true
+
+- name: Create Readarr service
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/readarr.service
+    mode: '644'
+    content: |
+      [Unit]
+      Description=Readarr Daemon
+      After=network.target
+
+      [Service]
+      ExecStart=/opt/Readarr/Readarr -nobrowser -data=/opt/Readarr
+      User=readarr
+      Group=readarr
+      Restart=on-failure
+      LimitNOFILE=32768
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: Reload systemd and enable Readarr service
+  ansible.builtin.systemd:
+    daemon_reload: true
+    name: readarr
+    enabled: true
+    state: started
+
+- name: Restart Readarr to apply configuration
+  ansible.builtin.systemd:
+    name: readarr
+    state: restarted

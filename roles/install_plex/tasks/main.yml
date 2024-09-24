@@ -1,0 +1,107 @@
+- name: Ensure Plex dependencies are installed
+  ansible.builtin.apt:
+    name:
+      - curl
+      - wget
+    update_cache: true
+
+- name: Install Plex Media Server
+  ansible.builtin.apt:
+    deb:
+      "https://downloads.plex.tv/plex-media-server-new/1.41.0.8992-8463ad060/debian/plexmediaserver_1.41.0.8992-8463ad060_amd64.deb"
+- name: Install PlexUpdate script
+  ansible.builtin.shell: "bash -c \"$(wget -qO - https://raw.githubusercontent.com/mrworf/plexupdate/master/extras/installer.sh)\""
+  args:
+    creates: /usr/local/bin/plexupdate
+
+- name: Ensure /shared is present
+  ansible.builtin.file:
+    path: /shared
+    state: directory
+    owner: 1000
+    group: 1000
+    mode: '755'
+
+- name: Update Plex service user to UID 1000 and GID 1000
+  ansible.builtin.user:
+    name: plex
+    uid: 1000
+    group: 1000
+
+- name: Add Plex user to video group for QSV access
+  ansible.builtin.user:
+    name: plex
+    groups: video
+    append: true
+
+- name: Ensure plex group with GID 1000 exists
+  ansible.builtin.group:
+    name: plex
+    gid: 1000
+    state: present
+
+- name: Configure Plex to use /shared for media
+  ansible.builtin.lineinfile:
+    path: /etc/plex/plexmediaserver.conf
+    regexp: '^PLEX_MEDIA_SERVER_APPLICATION_SUPPORT_DIR='
+    line: 'PLEX_MEDIA_SERVER_APPLICATION_SUPPORT_DIR="/shared"'
+    state: present
+
+- name: Create custom Plex service configuration for Intel QSV and media access
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/plexmediaserver.service
+    mode: '644'
+    content: |
+      [Unit]
+      Description=Plex Media Server for Linux
+      After=network.target
+
+      [Service]
+      User=plex
+      Group=plex
+      Environment="PLEX_MEDIA_SERVER_APPLICATION_SUPPORT_DIR=/shared"
+      Environment="PLEX_MEDIA_SERVER_MAX_PLUGIN_PROCS=6"
+      Environment="PLEX_MEDIA_SERVER_TMPDIR=/tmp"
+      Environment="PLEX_MEDIA_SERVER_HOME=/usr/lib/plexmediaserver"
+      ExecStart=/usr/lib/plexmediaserver/Plex\ Media\ Server
+      ExecStop=/bin/kill -HUP $MAINPID
+      Restart=on-failure
+      RestartSec=10
+      LimitNOFILE=32768
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: Create systemd service for PlexUpdate
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/plexupdate.service
+    mode: '644'
+    content: |
+      [Unit]
+      Description=PlexUpdate Daemon
+      After=network.target
+
+      [Service]
+      ExecStart=/usr/local/bin/plexupdate
+      User=plex
+      Group=plex
+      Restart=on-failure
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: Reload systemd to apply plexupdate service
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Enable and start plexupdate.service
+  ansible.builtin.systemd:
+    name: plexupdate.service
+    enabled: true
+    state: restarted
+
+- name: Restart Plex to apply configuration
+  ansible.builtin.systemd:
+    name: plexmediaserver.service
+    enabled: true
+    state: restarted

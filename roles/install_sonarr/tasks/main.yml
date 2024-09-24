@@ -1,0 +1,79 @@
+- name: Install prerequisites for Sonarr
+  ansible.builtin.apt:
+    name:
+      - curl
+      - libmono-cil-dev
+      - mediainfo
+      - sqlite3
+      - mono-devel
+      - ca-certificates-mono
+    state: present
+    update_cache: true
+
+- name: Ensure sonarr user and group with UID and GID 1000 exist
+  ansible.builtin.user:
+    name: sonarr
+    uid: 1000
+    group: sonarr
+    groups: video
+    state: present
+    create_home: false
+    shell: /usr/sbin/nologin
+
+- name: Ensure sonarr group with GID 1000 exists
+  ansible.builtin.group:
+    name: sonarr
+    gid: 1000
+    state: present
+
+- name: Download Sonarr
+  ansible.builtin.get_url:
+    url: https://services.sonarr.tv/v1/download/main/latest?version=4&os=linux&arch=x64
+    dest: /opt/sonarr.tar.gz
+    mode: '755'
+
+- name: Extract Sonarr
+  ansible.builtin.unarchive:
+    src: /opt/sonarr.tar.gz
+    dest: /opt/
+    remote_src: true
+    mode: '755'
+    owner: sonarr
+    group: sonarr
+
+- name: Change ownership of Sonarr directory to sonarr user
+  ansible.builtin.file:
+    path: /opt/Sonarr
+    owner: sonarr
+    group: sonarr
+    mode: '755'
+    recurse: true
+
+- name: Create Sonarr service
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/sonarr.service
+    mode: '644'
+    content: |
+      [Unit]
+      Description=Sonarr Daemon
+      After=network.target
+
+      [Service]
+      ExecStart=/opt/Sonarr/Sonarr -nobrowser -data=/opt/Sonarr
+      User=sonarr
+      Group=sonarr
+      Restart=on-failure
+      LimitNOFILE=32768
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: Reload systemd to apply changes
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Start and enable Sonarr service
+  ansible.builtin.systemd:
+    name: sonarr
+    enabled: true
+    state: started
