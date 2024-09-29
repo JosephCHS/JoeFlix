@@ -1,20 +1,20 @@
-name: Install JoeFlix Services
-hosts: all
-become: true
+- name: Install JoeFlix Services
+  hosts: all
+  become: true
 
-roles:
-  - role: install_bazarr
-  - role: install_calibre_web
-  - role: install_flaresolverr
-  - role: install_gotify
-  - role: install_homepage
-  - role: install_kavita
-  - role: install_lidarr
-  - role: install_overseerr
-  - role: install_plex
-  - role: install_prowlarr
-  - role: install_qbittorrent
-  - role: install_radarr
-  - role: install_readarr
-  - role: install_sonarr
-  - role: install_tautulli
+  roles:
+    - role: install_bazarr
+    - role: install_calibre_web
+    - role: install_flaresolverr
+    - role: install_gotify
+    - role: install_homepage
+    - role: install_kavita
+    - role: install_lidarr
+    - role: install_overseerr
+    - role: install_plex
+    - role: install_prowlarr
+    - role: install_qbittorrent
+    - role: install_radarr
+    - role: install_readarr
+    - role: install_sonarr
+    - role: install_tautulli
