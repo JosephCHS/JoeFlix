@@ -143,9 +143,9 @@ Each service is deployed with optimized configurations for its role. Notable set
 ------------------------------
 
 ### Technical Details
-UID/GID Mapping: Ensures consistency across host and containers, using UID 1000 and GID 1000.
-QSV Hardware Transcoding: Configured for Plex with proper group memberships (video and render).
-Terraform Null Resources: Used to execute Ansible playbooks after container creation.
+* UID/GID Mapping: Ensures consistency across host and containers, using UID `1000` and GID `1000`.
+* QSV Hardware Transcoding: Configured for Plex with proper group memberships (video and render).
+* Terraform Null Resources: Used to execute Ansible playbooks after container creation.
 
 ------------------------------
 
