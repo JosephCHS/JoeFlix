@@ -5,46 +5,39 @@
       - libmono-cil-dev
       - mediainfo
       - sqlite3
+      - unzip
     state: present
     update_cache: true
 
-- name: Ensure lidarr user and group with UID and GID 1000 exist
-  ansible.builtin.user:
-    name: lidarr
-    uid: 1000
-    group: lidarr
-    groups: joeflix
-    create_home: false
-    shell: /usr/sbin/nologin
-
-- name: Ensure lidarr group with GID 1000 exists
-  ansible.builtin.group:
-    name: lidarr
-    gid: 1000
-    state: present
+- name: Ensure /var/lib/lidarr directory exists
+  ansible.builtin.file:
+    path: /var/lib/lidarr
+    state: directory
+    mode: '775'
 
 - name: Download Lidarr
   ansible.builtin.get_url:
     url: http://lidarr.servarr.com/v1/update/master/updatefile?os=linux&runtime=netcore&arch=x64
     dest: /opt/lidarr.tar.gz
-    mode: '755'
+    mode: '775'
 
 - name: Extract Lidarr
   ansible.builtin.unarchive:
     src: /opt/lidarr.tar.gz
-    dest: /opt/lidarr
+    dest: /opt/
     remote_src: true
-    mode: '755'
-    owner: lidarr
-    group: lidarr
+    mode: '775'
 
 - name: Ensure user and group has correct rights over extracted files
   ansible.builtin.file:
-    path: /opt/lidarr
-    owner: lidarr
-    group: lidarr
-    mode: '755'
+    path: /opt/Lidarr
+    mode: '775'
     recurse: true
+
+- name: Clean up the downloaded tarball
+  ansible.builtin.file:
+    path: /opt/lidar.tar.gz
+    state: absent
 
 - name: Create systemd service for Lidarr
   ansible.builtin.copy:
@@ -53,14 +46,16 @@
     content: |
       [Unit]
       Description=Lidarr Daemon
-      After=network.target
+      After=syslog.target network.target
 
       [Service]
-      ExecStart=/opt/Lidarr/Lidarr -nobrowser -data=/opt/Lidarr
-      User=lidarr
-      Group=lidarr
+      UMask=0002
+      Type=simple
+      ExecStart=/opt/Lidarr/Lidarr -nobrowser -data=/var/lib/lidarr/
+      TimeoutStopSec=20
+      KillMode=process
       Restart=on-failure
-      LimitNOFILE=32768
+      LimitNOFILE=16384
 
       [Install]
       WantedBy=multi-user.target
@@ -74,3 +69,8 @@
     name: lidarr
     enabled: true
     state: started
+
+- name: Cleaning up unused and unnecessary package files
+  ansible.builtin.apt:
+    autoremove: true
+    autoclean: true

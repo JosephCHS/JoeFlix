@@ -7,17 +7,20 @@ resource "proxmox_lxc" "plex_lxc" {
   tags        = "lxc;media"
   vmid        = var.plex_container_id
   # Non-specific variables
-  nameserver   = join(",", var.dns_servers)
-  onboot       = var.onboot
-  ostemplate   = "local:vztmpl/ubuntu-22.04-standard_22.04-1_amd64.tar.zst"
-  password     = var.password_lxc_plex
-  start        = var.start
-  swap         = var.swap
-  target_node  = var.target_node
-  unprivileged = var.unprivileged
+  nameserver      = join(",", var.dns_servers)
+  onboot          = var.onboot
+  ostemplate      = "local:vztmpl/ubuntu-22.04-standard_22.04-1_amd64.tar.zst"
+  password        = var.password_lxc_plex
+  start           = var.start
+  swap            = var.swap
+  target_node     = var.target_node
+  unprivileged    = var.unprivileged
   ssh_public_keys = <<-EOT
-    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMOAYPEDXQKHilhu+pmTFpk8Q/sHnI3hXEcuV+UUkNTd chs.jo@proton.me
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGWyUbF2OOv8rBFTb57bwb9sZhfxnSg0Fv1XA8B1FdaT chs.jo@proton.me
   EOT  
+  features {
+    nesting = true
+  }
   rootfs {
     storage = "local-lvm"
     size    = "500G"
@@ -30,30 +33,12 @@ resource "proxmox_lxc" "plex_lxc" {
     slot    = "0"
     key     = 0
   }
-  mountpoint {
-    mp     = "/dev/dri"
-    volume = "/dev/dri"
-    size   = "0G"
-    slot   = "1"
-    key    = 1
-  }
   network {
     name     = var.network.name
     bridge   = var.network.bridge
     ip       = "192.168.1.${var.plex_container_id}/24"
     gw       = var.network.gw
     firewall = var.network.firewall
-  }
-  # Wait for container to be reachable
-  #depends_on = [null_resource.wait_for_plex]
-  # Add a provisioner to run Ansible after the LXC container is created
-  provisioner "local-exec" {
-    # Only run after the LXC container is fully created and started
-    when = create
-    command = "sleep 15; ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i hosts.yml main.yml --limit plex -vvvv"
-    environment = {
-      ANSIBLE_HOST_KEY_CHECKING = "False"
-    }
   }
 }
 
@@ -75,8 +60,11 @@ resource "proxmox_lxc" "radarr_lxc" {
   target_node  = var.target_node
   unprivileged = var.unprivileged
   ssh_public_keys = <<-EOT
-    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMOAYPEDXQKHilhu+pmTFpk8Q/sHnI3hXEcuV+UUkNTd chs.jo@proton.me
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGWyUbF2OOv8rBFTb57bwb9sZhfxnSg0Fv1XA8B1FdaT chs.jo@proton.me
   EOT  
+  features {
+    nesting = true
+  }
   rootfs {
     storage = "local-lvm"
     size    = "10G"
@@ -95,17 +83,6 @@ resource "proxmox_lxc" "radarr_lxc" {
     ip       = "192.168.1.${var.radarr_container_id}/24"
     gw       = var.network.gw
     firewall = var.network.firewall
-  }
-  # Wait for container to be reachable
-  #depends_on = [null_resource.wait_for_radarr]
-  # Add a provisioner to run Ansible after the LXC container is created
-  provisioner "local-exec" {
-    # Only run after the LXC container is fully created and started
-    when = create
-    command = "sleep 15; ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i hosts.yml main.yml --limit radarr -vvvv"
-    environment = {
-      ANSIBLE_HOST_KEY_CHECKING = "False"
-    }
   }
 }
 
@@ -126,9 +103,12 @@ resource "proxmox_lxc" "flaresolverr_lxc" {
   swap         = var.swap
   unprivileged = var.unprivileged
   ssh_public_keys = <<-EOT
-    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMOAYPEDXQKHilhu+pmTFpk8Q/sHnI3hXEcuV+UUkNTd chs.jo@proton.me
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGWyUbF2OOv8rBFTb57bwb9sZhfxnSg0Fv1XA8B1FdaT chs.jo@proton.me
   EOT  
   target_node  = var.target_node
+  features {
+    nesting = true
+  }
   rootfs {
     size    = "4G"
     storage = "local-lvm"
@@ -139,17 +119,6 @@ resource "proxmox_lxc" "flaresolverr_lxc" {
     ip       = "192.168.1.${var.flaresolverr_container_id}/24"
     gw       = var.network.gw
     firewall = var.network.firewall
-  }
-  # Wait for container to be reachable
-  #depends_on = [null_resource.wait_for_flaresolverr]
-  # Add a provisioner to run Ansible after the LXC container is created
-  provisioner "local-exec" {
-    # Only run after the LXC container is fully created and started
-    when = create
-    command = "sleep 15; ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i hosts.yml main.yml --limit flaresolverr -vvvv"
-    environment = {
-      ANSIBLE_HOST_KEY_CHECKING = "False"
-    }
   }
 }
 
@@ -170,9 +139,12 @@ resource "proxmox_lxc" "bazarr_lxc" {
   swap         = var.swap
   unprivileged = var.unprivileged
   ssh_public_keys = <<-EOT
-    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMOAYPEDXQKHilhu+pmTFpk8Q/sHnI3hXEcuV+UUkNTd chs.jo@proton.me
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGWyUbF2OOv8rBFTb57bwb9sZhfxnSg0Fv1XA8B1FdaT chs.jo@proton.me
   EOT  
   target_node  = var.target_node
+  features {
+    nesting = true
+  }
   rootfs {
     size    = "4G"
     storage = "local-lvm"
@@ -191,17 +163,6 @@ resource "proxmox_lxc" "bazarr_lxc" {
     ip       = "192.168.1.${var.bazarr_container_id}/24"
     gw       = var.network.gw
     firewall = var.network.firewall
-  }
-  # Wait for container to be reachable
-  #depends_on = [null_resource.wait_for_bazarr]
-  # Add a provisioner to run Ansible after the LXC container is created
-  provisioner "local-exec" {
-    # Only run after the LXC container is fully created and started
-    when = create
-    command = "sleep 15; ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i hosts.yml main.yml --limit bazarr -vvvv"
-    environment = {
-      ANSIBLE_HOST_KEY_CHECKING = "False"
-    }
   }
 }
 
@@ -222,9 +183,12 @@ resource "proxmox_lxc" "calibre_web_lxc" {
   swap         = var.swap
   unprivileged = var.unprivileged
   ssh_public_keys = <<-EOT
-    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMOAYPEDXQKHilhu+pmTFpk8Q/sHnI3hXEcuV+UUkNTd chs.jo@proton.me
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGWyUbF2OOv8rBFTb57bwb9sZhfxnSg0Fv1XA8B1FdaT chs.jo@proton.me
   EOT  
   target_node  = var.target_node
+  features {
+    nesting = true
+  }
   rootfs {
     size    = "4G"
     storage = "local-lvm"
@@ -243,17 +207,6 @@ resource "proxmox_lxc" "calibre_web_lxc" {
     ip       = "192.168.1.${var.calibre_web_container_id}/24"
     gw       = var.network.gw
     firewall = var.network.firewall
-  }
-  # Wait for container to be reachable
-  #depends_on = [null_resource.wait_for_calibre_web]
-  # Add a provisioner to run Ansible after the LXC container is created
-  provisioner "local-exec" {
-    # Only run after the LXC container is fully created and started
-    when = create
-    command = "sleep 15; ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i hosts.yml main.yml --limit calibre_web -vvvv"
-    environment = {
-      ANSIBLE_HOST_KEY_CHECKING = "False"
-    }
   }
 }
 
@@ -275,8 +228,11 @@ resource "proxmox_lxc" "lidarr_lxc" {
   target_node  = var.target_node
   unprivileged = var.unprivileged
   ssh_public_keys = <<-EOT
-    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMOAYPEDXQKHilhu+pmTFpk8Q/sHnI3hXEcuV+UUkNTd chs.jo@proton.me
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGWyUbF2OOv8rBFTb57bwb9sZhfxnSg0Fv1XA8B1FdaT chs.jo@proton.me
   EOT  
+  features {
+    nesting = true
+  }
   rootfs {
     storage = "local-lvm"
     size    = "4G"
@@ -295,17 +251,6 @@ resource "proxmox_lxc" "lidarr_lxc" {
     ip       = "192.168.1.${var.lidarr_container_id}/24"
     gw       = var.network.gw
     firewall = var.network.firewall
-  }
-  # Wait for container to be reachable
-  #depends_on = [null_resource.wait_for_lidarr]
-  # Add a provisioner to run Ansible after the LXC container is created
-  provisioner "local-exec" {
-    # Only run after the LXC container is fully created and started
-    when = create
-    command = "sleep 15; ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i hosts.yml main.yml --limit lidarr -vvvv"
-    environment = {
-      ANSIBLE_HOST_KEY_CHECKING = "False"
-    }
   }
 }
 
@@ -327,8 +272,11 @@ resource "proxmox_lxc" "overseerr_lxc" {
   target_node  = var.target_node
   unprivileged = var.unprivileged
   ssh_public_keys = <<-EOT
-    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMOAYPEDXQKHilhu+pmTFpk8Q/sHnI3hXEcuV+UUkNTd chs.jo@proton.me
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGWyUbF2OOv8rBFTb57bwb9sZhfxnSg0Fv1XA8B1FdaT chs.jo@proton.me
   EOT  
+  features {
+    nesting = true
+  }
   rootfs {
     storage = "local-lvm"
     size    = "8G"
@@ -339,17 +287,6 @@ resource "proxmox_lxc" "overseerr_lxc" {
     ip       = "192.168.1.${var.overseerr_container_id}/24"
     gw       = var.network.gw
     firewall = var.network.firewall
-  }
-  # Wait for container to be reachable
-  #depends_on = [null_resource.wait_for_overseerr]
-  # Add a provisioner to run Ansible after the LXC container is created
-  provisioner "local-exec" {
-    # Only run after the LXC container is fully created and started
-    when = create
-    command = "sleep 15; ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i hosts.yml main.yml --limit overseerr -vvvv"
-    environment = {
-      ANSIBLE_HOST_KEY_CHECKING = "False"
-    }
   }
 }
 
@@ -370,6 +307,12 @@ resource "proxmox_lxc" "prowlarr_lxc" {
   start         = var.start
   target_node   = var.target_node
   unprivileged  = var.unprivileged
+  ssh_public_keys = <<-EOT
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGWyUbF2OOv8rBFTb57bwb9sZhfxnSg0Fv1XA8B1FdaT chs.jo@proton.me
+  EOT    
+  features {
+    nesting = true
+  }
   rootfs {
     storage = "local-lvm"
     size    = "4G"
@@ -380,17 +323,6 @@ resource "proxmox_lxc" "prowlarr_lxc" {
     ip       = "192.168.1.${var.prowlarr_container_id}/24"
     gw       = var.network.gw
     firewall = var.network.firewall
-  }
-  # Wait for container to be reachable
-  #depends_on = [null_resource.wait_for_prowlarr]
-  # Add a provisioner to run Ansible after the LXC container is created
-  provisioner "local-exec" {
-    # Only run after the LXC container is fully created and started
-    when = create
-    command = "sleep 15; ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i hosts.yml main.yml --limit prowlarr -vvvv"
-    environment = {
-      ANSIBLE_HOST_KEY_CHECKING = "False"
-    }
   }
 }
 
@@ -412,8 +344,11 @@ resource "proxmox_lxc" "readarr_lxc" {
   target_node  = var.target_node
   unprivileged = var.unprivileged
   ssh_public_keys = <<-EOT
-    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMOAYPEDXQKHilhu+pmTFpk8Q/sHnI3hXEcuV+UUkNTd chs.jo@proton.me
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGWyUbF2OOv8rBFTb57bwb9sZhfxnSg0Fv1XA8B1FdaT chs.jo@proton.me
   EOT  
+  features {
+    nesting = true
+  }
   rootfs {
     storage = "local-lvm"
     size    = "4G"
@@ -432,17 +367,6 @@ resource "proxmox_lxc" "readarr_lxc" {
     ip       = "192.168.1.${var.readarr_container_id}/24"
     gw       = var.network.gw
     firewall = var.network.firewall
-  }
-  # Wait for container to be reachable
-  #depends_on = [null_resource.wait_for_readarr]
-  # Add a provisioner to run Ansible after the LXC container is created
-  provisioner "local-exec" {
-    # Only run after the LXC container is fully created and started
-    when = create
-    command = "sleep 15; ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i hosts.yml main.yml --limit readarr -vvvv"
-    environment = {
-      ANSIBLE_HOST_KEY_CHECKING = "False"
-    }
   }
 }
 
@@ -464,8 +388,11 @@ resource "proxmox_lxc" "sonarr_lxc" {
   target_node  = var.target_node
   unprivileged = var.unprivileged
   ssh_public_keys = <<-EOT
-    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMOAYPEDXQKHilhu+pmTFpk8Q/sHnI3hXEcuV+UUkNTd chs.jo@proton.me
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGWyUbF2OOv8rBFTb57bwb9sZhfxnSg0Fv1XA8B1FdaT chs.jo@proton.me
   EOT  
+  features {
+    nesting = true
+  }
   rootfs {
     size    = "5G"
     storage = "local-lvm"
@@ -484,17 +411,6 @@ resource "proxmox_lxc" "sonarr_lxc" {
     ip       = "192.168.1.${var.sonarr_container_id}/24"
     gw       = var.network.gw
     firewall = var.network.firewall
-  }
-  # Wait for container to be reachable
-  #depends_on = [null_resource.wait_for_sonarr]
-  # Add a provisioner to run Ansible after the LXC container is created
-  provisioner "local-exec" {
-    # Only run after the LXC container is fully created and started
-    when = create
-    command = "sleep 15; ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i hosts.yml main.yml --limit sonarr -vvvv"
-    environment = {
-      ANSIBLE_HOST_KEY_CHECKING = "False"
-    }
   }
 }
 
@@ -516,7 +432,7 @@ resource "proxmox_lxc" "tautulli_lxc" {
   target_node  = var.target_node
   unprivileged = var.unprivileged
   ssh_public_keys = <<-EOT
-    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMOAYPEDXQKHilhu+pmTFpk8Q/sHnI3hXEcuV+UUkNTd chs.jo@proton.me
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGWyUbF2OOv8rBFTb57bwb9sZhfxnSg0Fv1XA8B1FdaT chs.jo@proton.me
   EOT  
   network {
     name     = var.network.name
@@ -525,20 +441,12 @@ resource "proxmox_lxc" "tautulli_lxc" {
     gw       = var.network.gw
     firewall = var.network.firewall
   }
+  features {
+    nesting = true
+  }
   rootfs {
     storage = "local-lvm"
     size    = "4G"
-  }
-  # Wait for container to be reachable
-  #depends_on = [null_resource.wait_for_tautulli]
-  # Add a provisioner to run Ansible after the LXC container is created
-  provisioner "local-exec" {
-    # Only run after the LXC container is fully created and started
-    when = create
-    command = "sleep 15; ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i hosts.yml main.yml --limit tautulli -vvvv"
-    environment = {
-      ANSIBLE_HOST_KEY_CHECKING = "False"
-    }
   }
 }
 
@@ -560,8 +468,11 @@ resource "proxmox_lxc" "kavita_lxc" {
   target_node  = var.target_node
   unprivileged = var.unprivileged
   ssh_public_keys = <<-EOT
-    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMOAYPEDXQKHilhu+pmTFpk8Q/sHnI3hXEcuV+UUkNTd chs.jo@proton.me
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGWyUbF2OOv8rBFTb57bwb9sZhfxnSg0Fv1XA8B1FdaT chs.jo@proton.me
   EOT  
+  features {
+    nesting = true
+  }
   rootfs {
     storage = "local-lvm"
     size    = "10G"
@@ -581,18 +492,8 @@ resource "proxmox_lxc" "kavita_lxc" {
     gw       = var.network.gw
     firewall = var.network.firewall
   }
-  # Wait for container to be reachable
-  #depends_on = [null_resource.wait_for_kavita]
-  # Add a provisioner to run Ansible after the LXC container is created
-  provisioner "local-exec" {
-    # Only run after the LXC container is fully created and started
-    when = create    
-    command = "sleep 15; ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i hosts.yml main.yml --limit kavita -vvvv"
-    environment = {
-      ANSIBLE_HOST_KEY_CHECKING = "False"
-    }
-  }
 }
+
 resource "proxmox_lxc" "homepage_lxc" {
   # Specific variables
   cores       = 1
@@ -611,8 +512,11 @@ resource "proxmox_lxc" "homepage_lxc" {
   target_node  = var.target_node
   unprivileged = var.unprivileged
   ssh_public_keys = <<-EOT
-    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMOAYPEDXQKHilhu+pmTFpk8Q/sHnI3hXEcuV+UUkNTd chs.jo@proton.me
-  EOT  
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGWyUbF2OOv8rBFTb57bwb9sZhfxnSg0Fv1XA8B1FdaT chs.jo@proton.me
+  EOT
+  features {
+    nesting = true
+  }
   rootfs {
     size    = "3G"
     storage = "local-lvm"
@@ -623,17 +527,6 @@ resource "proxmox_lxc" "homepage_lxc" {
     ip       = "192.168.1.${var.homepage_container_id}/24"
     gw       = var.network.gw
     firewall = var.network.firewall
-  }
-  # Wait for container to be reachable
-  #depends_on = [null_resource.wait_for_homepage]
-  # Add a provisioner to run Ansible after the LXC container is created  
-  provisioner "local-exec" {
-    # Only run after the LXC container is fully created and started
-    when = create
-    command = "sleep 15; ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i hosts.yml main.yml --limit homepage -vvvv"
-    environment = {
-      ANSIBLE_HOST_KEY_CHECKING = "False"
-    }
   }
 }
 
@@ -655,8 +548,11 @@ resource "proxmox_lxc" "qbittorrent_lxc" {
   target_node  = var.target_node
   unprivileged = var.unprivileged
   ssh_public_keys = <<-EOT
-    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMOAYPEDXQKHilhu+pmTFpk8Q/sHnI3hXEcuV+UUkNTd chs.jo@proton.me
-  EOT  
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGWyUbF2OOv8rBFTb57bwb9sZhfxnSg0Fv1XA8B1FdaT chs.jo@proton.me
+  EOT
+  features {
+    nesting = true
+  }
   rootfs {
     storage = "local-lvm"
     size    = "10G"
@@ -675,17 +571,6 @@ resource "proxmox_lxc" "qbittorrent_lxc" {
     ip       = "192.168.1.${var.qbittorrent_container_id}/24"
     gw       = var.network.gw
     firewall = var.network.firewall
-  }
-  # Wait for container to be reachable
-  #depends_on = [null_resource.wait_for_qbittorrent]
-  # Add a provisioner to run Ansible after the LXC container is created  
-  provisioner "local-exec" {
-    # Only run after the LXC container is fully created and started
-    when = create
-    command = "sleep 15; ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i hosts.yml main.yml --limit qbittorrent -vvvv"
-    environment = {
-      ANSIBLE_HOST_KEY_CHECKING = "False"
-    }
   }
 }
 
@@ -707,8 +592,11 @@ resource "proxmox_lxc" "gotify_lxc" {
   target_node  = var.target_node
   unprivileged = var.unprivileged
   ssh_public_keys = <<-EOT
-    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMOAYPEDXQKHilhu+pmTFpk8Q/sHnI3hXEcuV+UUkNTd chs.jo@proton.me
-  EOT  
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGWyUbF2OOv8rBFTb57bwb9sZhfxnSg0Fv1XA8B1FdaT chs.jo@proton.me
+  EOT
+  features {
+    nesting = true
+  }
   rootfs {
     size    = "2G"
     storage = "local-lvm"
@@ -720,14 +608,29 @@ resource "proxmox_lxc" "gotify_lxc" {
     gw       = var.network.gw
     firewall = var.network.firewall
   }
-  # Wait for container to be reachable
-  #depends_on = [null_resource.wait_for_gotify]
-  # Add a provisioner to run Ansible after the LXC container is created  
-  
+}
+
+resource "null_resource" "proxmox_post_tasks" {
+  depends_on = [
+    proxmox_lxc.plex_lxc,
+    proxmox_lxc.radarr_lxc,
+    proxmox_lxc.sonarr_lxc,
+    proxmox_lxc.bazarr_lxc,
+    proxmox_lxc.lidarr_lxc,
+    proxmox_lxc.prowlarr_lxc,
+    proxmox_lxc.readarr_lxc,
+    proxmox_lxc.overseerr_lxc,
+    proxmox_lxc.flaresolverr_lxc,
+    proxmox_lxc.tautulli_lxc,
+    proxmox_lxc.calibre_web_lxc,
+    proxmox_lxc.kavita_lxc,
+    proxmox_lxc.qbittorrent_lxc,
+    proxmox_lxc.homepage_lxc,
+    proxmox_lxc.gotify_lxc
+  ]
+
   provisioner "local-exec" {
-    # Only run after the LXC container is fully created and started
-    when = create
-    command = "sleep 15; ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i hosts.yml main.yml --limit gotify -vvvv"
+    command = "ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i hosts.yml main.yml --forks=15"
     environment = {
       ANSIBLE_HOST_KEY_CHECKING = "False"
     }

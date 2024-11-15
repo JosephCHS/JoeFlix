@@ -3,47 +3,67 @@
     name:
       - curl
       - unzip
+      - sudo
+      - git
+      - ca-certificates
+      - gnupg
     state: present
     update_cache: true
 
-- name: Ensure overseerr user and group with UID and GID 1000 exist
-  ansible.builtin.user:
-    name: overseerr
-    uid: 1000
-    group: overseerr
-    groups: joeflix
+- name: Ensure the Node.js repository is added
+  ansible.builtin.apt_key:
+    url: https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key
     state: present
-    create_home: false
-    shell: /usr/sbin/nologin
+    keyring: /etc/apt/keyrings/nodesource.gpg
 
-- name: Ensure overseerr group with GID 1000 exists
-  ansible.builtin.group:
-    name: overseerr
-    gid: 1000
-    state: present
-
-- name: Download Overseerr
-  ansible.builtin.get_url:
-    url: https://github.com/sct/overseerr/archive/refs/tags/v1.33.2.tar.gz
-    dest: /opt/overseerr.zip
+- name: Create sources.list.d directory if not exists
+  ansible.builtin.file:
+    path: /etc/apt/sources.list.d
+    state: directory
     mode: '755'
 
-- name: Extract Overseerr
-  ansible.builtin.unarchive:
-    src: /opt/overseerr.zip
-    dest: /opt/overseerr
-    remote_src: true
-    mode: '755'
-    owner: overseerr
-    group: overseerr
+- name: Add Node.js repository
+  ansible.builtin.copy:
+    content: "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main"
+    dest: /etc/apt/sources.list.d/nodesource.list
+    mode: '644'
 
-- name: Ensure user and group has correct rights over extracted files
+- name: Update APT cache
+  ansible.builtin.apt:
+    update_cache: true
+
+- name: Install Node.js
+  ansible.builtin.apt:
+    name: nodejs
+    state: present
+
+- name: Install Yarn globally
+  community.general.npm:
+    name: yarn
+    global: true
+    state: present
+
+- name: Ensure /opt/overseerr directory exists
   ansible.builtin.file:
     path: /opt/overseerr
-    owner: overseerr
-    group: overseerr
-    mode: '755'
-    recurse: true
+    state: directory
+    mode: '775'
+
+- name: Clone the Overseerr repository
+  ansible.builtin.git:
+    repo: https://github.com/sct/overseerr.git
+    dest: /opt/overseerr
+    update: false
+
+- name: Install dependencies for Overseerr using Yarn
+  ansible.builtin.command:
+    cmd: yarn install
+    chdir: /opt/overseerr
+
+- name: Build Overseerr
+  ansible.builtin.command:
+    cmd: yarn build
+    chdir: /opt/overseerr
 
 - name: Create systemd service for Overseerr
   ansible.builtin.copy:
@@ -55,11 +75,11 @@
       After=network.target
 
       [Service]
-      ExecStart=/opt/overseerr/overseerr
-      User=overseerr
-      Group=overseerr
-      Restart=on-failure
+      Type=exec
+      WorkingDirectory=/opt/overseerr
+      ExecStart=/usr/bin/yarn start
       LimitNOFILE=32768
+      Restart=on-failure
 
       [Install]
       WantedBy=multi-user.target
@@ -73,3 +93,8 @@
     name: overseerr
     enabled: true
     state: started
+
+- name: Cleaning up unused and unnecessary package files
+  ansible.builtin.apt:
+    autoremove: true
+    autoclean: true

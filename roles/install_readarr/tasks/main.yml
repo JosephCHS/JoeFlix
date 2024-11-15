@@ -5,52 +5,39 @@
       - libmono-cil-dev
       - mediainfo
       - sqlite3
+      - unzip
     update_cache: true
     state: present
+
+- name: Ensure /var/lib/readarr directory exists
+  ansible.builtin.file:
+    path: /var/lib/readarr
+    state: directory
+    mode: '775'
 
 - name: Download and extract Readarr
   ansible.builtin.get_url:
     url: "https://github.com/Readarr/Readarr/releases/download/v0.3.32.2587/Readarr.develop.0.3.32.2587.linux-core-x64.tar.gz"
     dest: /opt/readarr.tar.gz
-    mode: '755'
+    mode: '775'
 
 - name: Extract Readarr
   ansible.builtin.unarchive:
     src: /opt/readarr.tar.gz
     dest: /opt/
     remote_src: true
-    mode: '755'
+    mode: '775'
 
-- name: Create Readarr user with UID 1000 and GID 1000
-  ansible.builtin.user:
-    name: readarr
-    uid: 1000
-    group: 1000
-    shell: /usr/sbin/nologin
-    create_home: false
-    system: true
-
-- name: Ensure bazarr group with GID 1000 exists
-  ansible.builtin.group:
-    name: bazarr
-    gid: 1000
-    state: present
-
-- name: Create media directory for Readarr
-  ansible.builtin.file:
-    path: /shared/books
-    state: directory
-    owner: readarr
-    group: readarr
-    mode: '755'
-
-- name: Ensure user and group permissions for Readarr files
+- name: Ensure user and group has correct rights over extracted files
   ansible.builtin.file:
     path: /opt/Readarr
-    owner: readarr
-    group: readarr
-    mode: '755'
+    mode: '775'
     recurse: true
+
+- name: Clean up the downloaded tarball
+  ansible.builtin.file:
+    path: /opt/readarr.tar.gz
+    state: absent
 
 - name: Create Readarr service
   ansible.builtin.copy:
@@ -59,12 +46,14 @@
     content: |
       [Unit]
       Description=Readarr Daemon
-      After=network.target
+      After=syslog.target network.target
 
       [Service]
-      ExecStart=/opt/Readarr/Readarr -nobrowser -data=/opt/Readarr
-      User=readarr
-      Group=readarr
+      UMask=0002
+      Type=simple
+      ExecStart=/opt/Readarr/Readarr -nobrowser -data=/var/lib/readarr/
+      TimeoutStopSec=20
+      KillMode=process
       Restart=on-failure
       LimitNOFILE=32768
 
@@ -82,3 +71,8 @@
   ansible.builtin.systemd:
     name: readarr
     state: restarted
+
+- name: Cleaning up unused and unnecessary package files
+  ansible.builtin.apt:
+    autoremove: true
+    autoclean: true

@@ -3,47 +3,28 @@
     name:
       - wget
       - unzip
+      - curl
+      - sudo
     state: present
     update_cache: true
 
-- name: Ensure kavita user and group with UID and GID 1000 exist
-  ansible.builtin.user:
-    name: kavita
-    uid: 1000
-    group: kavita
-    groups: joeflix
-    state: present
-    create_home: false
-    shell: /usr/sbin/nologin
+- name: Get the latest Kavita release version
+  ansible.builtin.shell: |
+    curl -s https://api.github.com/repos/Kareadita/Kavita/releases/latest | grep "tag_name" | awk '{print substr($2, 2, length($2)-3) }'
+  register: kavita_release
 
-- name: Ensure kavita group with GID 1000 exists
-  ansible.builtin.group:
-    name: kavita
-    gid: 1000
-    state: present
-
-- name: Download Kavita
-  ansible.builtin.get_url:
-    url: https://github.com/Kareadita/Kavita/releases/download/v0.8.3.2/kavita-linux-x64.tar.gz
-    dest: /opt/kavita.zip
-    mode: '755'
-
-- name: Extract Kavita
-  ansible.builtin.unarchive:
-    src: /opt/kavita.zip
-    dest: /opt/kavita
-    remote_src: true
-    mode: '755'
-    owner: kavita
-    group: kavita
+- name: Download and extract Kavita
+  ansible.builtin.shell: |
+    curl -fsSL https://github.com/Kareadita/Kavita/releases/download/{{ kavita_release.stdout }}/kavita-linux-x64.tar.gz | tar -xvzf - --no-same-owner
+  args:
+    chdir: /opt
 
 - name: Ensure user and group has correct rights over extracted files
   ansible.builtin.file:
-    path: /opt/kavita
-    owner: kavita
-    group: kavita
-    mode: '755'
+    path: /opt/Kavita
+    mode: '775'
     recurse: true
+  become: true
 
 - name: Create systemd service for Kavita
   ansible.builtin.copy:
@@ -55,14 +36,29 @@
       After=network.target
 
       [Service]
-      ExecStart=/opt/kavita/kavita
-      User=kavita
-      Group=kavita
+      Type=simple
+      User=root
+      WorkingDirectory=/opt/Kavita
+      ExecStart=/opt/Kavita/Kavita
+      TimeoutStopSec=20
+      KillMode=process
       Restart=on-failure
       LimitNOFILE=32768
 
       [Install]
       WantedBy=multi-user.target
+
+- name: Ensure all files in /opt/Kavita are executable
+  ansible.builtin.file:
+    path: /opt/Kavita/
+    mode: 'u+x'
+    recurse: true
+
+- name: Change ownership of all files in /opt/Kavita to root
+  ansible.builtin.file:
+    path: /opt/Kavita/
+    owner: root
+    recurse: true
 
 - name: Reload systemd to apply changes
   ansible.builtin.systemd:
@@ -73,3 +69,8 @@
     name: kavita
     enabled: true
     state: started
+
+- name: Cleaning up unused and unnecessary package files
+  ansible.builtin.apt:
+    autoremove: true
+    autoclean: true

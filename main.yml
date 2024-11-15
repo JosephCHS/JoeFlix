@@ -1,20 +1,85 @@
-- name: Install JoeFlix Services
+- name: Install all services in parallel
   hosts: all
   become: true
+  strategy: free
 
-  roles:
-    - role: install_bazarr
-    - role: install_calibre_web
-    - role: install_flaresolverr
-    - role: install_gotify
-    - role: install_homepage
-    - role: install_kavita
-    - role: install_lidarr
-    - role: install_overseerr
-    - role: install_plex
-    - role: install_prowlarr
-    - role: install_qbittorrent
-    - role: install_radarr
-    - role: install_readarr
-    - role: install_sonarr
-    - role: install_tautulli
+  tasks:
+    - name: Install Bazarr
+      ansible.builtin.include_role:
+        name: install_bazarr
+      when: inventory_hostname == "bazarr"
+
+    - name: Install Calibre Web
+      ansible.builtin.include_role:
+        name: install_calibre_web
+      when: inventory_hostname == "calibre_web"
+
+    - name: Install FlareSolverr
+      ansible.builtin.include_role:
+        name: install_flaresolverr
+      when: inventory_hostname == "flaresolverr"
+
+    - name: Install Gotify
+      ansible.builtin.include_role:
+        name: install_gotify
+      when: inventory_hostname == "gotify"
+
+    - name: Install Homepage
+      ansible.builtin.include_role:
+        name: install_homepage
+      when: inventory_hostname == "homepage"
+
+    - name: Install Kavita
+      ansible.builtin.include_role:
+        name: install_kavita
+      when: inventory_hostname == "kavita"
+
+    - name: Install Lidarr
+      ansible.builtin.include_role:
+        name: install_lidarr
+      when: inventory_hostname == "lidarr"
+
+    - name: Install Overseerr
+      ansible.builtin.include_role:
+        name: install_overseerr
+      when: inventory_hostname == "overseerr"
+
+    - name: Install Plex
+      ansible.builtin.include_role:
+        name: install_plex
+      when: inventory_hostname == "plex"
+
+    - name: Install Prowlarr
+      ansible.builtin.include_role:
+        name: install_prowlarr
+      when: inventory_hostname == "prowlarr"
+
+    - name: Install qBittorrent
+      ansible.builtin.include_role:
+        name: install_qbittorrent
+      when: inventory_hostname == "qbittorrent"
+
+    - name: Install Radarr
+      ansible.builtin.include_role:
+        name: install_radarr
+      when: inventory_hostname == "radarr"
+
+    - name: Install Readarr
+      ansible.builtin.include_role:
+        name: install_readarr
+      when: inventory_hostname == "readarr"
+
+    - name: Install Sonarr
+      ansible.builtin.include_role:
+        name: install_sonarr
+      when: inventory_hostname == "sonarr"
+
+    - name: Install Tautulli
+      ansible.builtin.include_role:
+        name: install_tautulli
+      when: inventory_hostname == "tautulli"
+
+    - name: Install Proxmox services
+      ansible.builtin.include_role:
+        name: install_proxmox
+      when: inventory_hostname == "proxmox"

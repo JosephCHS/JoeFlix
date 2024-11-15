@@ -1,66 +1,92 @@
 - name: Install prerequisites for Calibre-Web
   ansible.builtin.apt:
     name:
+      - git
       - python3
       - python3-pip
       - python3-setuptools
       - python3-venv
-      - git
       - curl
-      - http-Auth
+      - sudo
+      - imagemagick
+      - python3-calibreweb
+      - python3-jsonschema
     state: present
     update_cache: true
 
-- name: Ensure calibre_web user and group with UID and GID 1000 exist
-  ansible.builtin.user:
-    name: calibre_web
-    uid: 1000
-    group: calibre_web
-    groups: joeflix
-    state: present
-    create_home: false
-    shell: /usr/sbin/nologin
+- name: Create the /opt/kepubify directory
+  ansible.builtin.file:
+    path: /opt/kepubify
+    state: directory
+    mode: '775'
 
-- name: Ensure calibre_web group with GID 1000 exists
-  ansible.builtin.group:
-    name: calibre_web
-    gid: 1000
-    state: present
+- name: Download Kepubify binary
+  ansible.builtin.get_url:
+    url: https://github.com/pgaskin/kepubify/releases/latest/download/kepubify-linux-64bit
+    dest: /opt/kepubify/kepubify-linux-64bit
+    mode: '775'
 
-- name: Download Calibre-Web
-  ansible.builtin.git:
-    repo: https://github.com/janeczku/calibre-web.git
-    dest: /opt/calibre-web
-    version: master
+- name: Make Kepubify binary executable
+  ansible.builtin.command:
+    cmd: chmod +x /opt/kepubify/kepubify-linux-64bit
+  args:
+    creates: /opt/kepubify/kepubify-linux-64bi
 
-- name: Install Python requirements for Calibre-Web
+- name: Create directory for Calibre-Web
+  ansible.builtin.file:
+    path: /opt/calibre-web
+    state: directory
+    mode: '775'
+
+- name: Create a virtual environment for Calibre-Web
+  ansible.builtin.command:
+    cmd: python3 -m venv /opt/calibre-web/venv
+    creates: /opt/calibre-web/venv/bin/activate
+
+- name: Install pip in the virtual environment
+  ansible.builtin.command:
+    cmd: /opt/calibre-web/venv/bin/python -m ensurepip --upgrade
+    creates: /opt/calibre-web/venv/bin/pip
+
+- name: Install Calibre-Web within the virtual environment
   ansible.builtin.pip:
-    requirements: /opt/calibre-web/requirements.txt
+    name: calibreweb
     virtualenv: /opt/calibre-web/venv
-    virtualenv_command: python3 -m venv
-    virtualenv_python: python3
+
+- name: Install jsonschema within the virtual environment
+  ansible.builtin.pip:
+    name: jsonschema
+    virtualenv: /opt/calibre-web/venv
+
+- name: Download Calibre-Web metadata.db file
+  ansible.builtin.get_url:
+    url: https://github.com/janeczku/calibre-web/raw/master/library/metadata.db
+    dest: /opt/calibre-web/metadata.db
+    mode: '775'
 
 - name: Ensure user and group has correct rights over extracted files
   ansible.builtin.file:
     path: /opt/calibre-web
-    owner: calibre_web
-    group: calibre_web
-    mode: '755'
+    mode: '775'
     recurse: true
 
 - name: Create systemd service for Calibre-Web
   ansible.builtin.copy:
-    dest: /etc/systemd/system/calibre_web.service
+    dest: /etc/systemd/system/cps.service
     mode: '644'
     content: |
       [Unit]
-      Description=Calibre-Web Daemon
+      Description=Calibre-Web Server
       After=network.target
 
       [Service]
-      ExecStart=/opt/calibre-web/venv/bin/python /opt/calibre-web/cps.py
-      User=calibre_web
-      Group=calibre_web
+      Type=simple
+      User=root
+      Group=root
+      WorkingDirectory=/opt/calibre-web
+      ExecStart=/opt/calibre-web/venv/bin/python /opt/calibre-web/venv/bin/cps
+      TimeoutStopSec=20
+      KillMode=process
       Restart=on-failure
       LimitNOFILE=32768
 
@@ -73,6 +99,11 @@
 
 - name: Enable and start Calibre-Web service
   ansible.builtin.systemd:
-    name: calibre_web
+    name: cps
     enabled: true
     state: started
+
+- name: Cleaning up unused and unnecessary package files
+  ansible.builtin.apt:
+    autoremove: true
+    autoclean: true

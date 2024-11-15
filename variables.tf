@@ -117,7 +117,7 @@ variable "template" {
 variable "unprivileged" {
   description = "Set the global right for the LXC container"
   type = bool
-  default = false
+  default = true
 }
 
 variable "proxmox_host" {
@@ -255,4 +255,10 @@ variable "password_lxc_plex" {
 variable "ssh_public_keys" {
   description = "Multi-line string of SSH public keys that will be added to the container. Can be defined using heredoc syntax."
   default = "NaN"
+}
+
+variable "token_nordvpn" {
+  description = "Allow login without 2FA to NordVPN."
+  type = string
+  sensitive = true
 }

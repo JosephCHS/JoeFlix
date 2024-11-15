@@ -1,0 +1,52 @@
+- name: Install prerequisites for Proxmox host
+  ansible.builtin.apt:
+    name:
+      - intel-gpu-tools
+    update_cache: true
+    state: present
+
+- name: Find LXC config files
+  ansible.builtin.find:
+    paths: /etc/pve/lxc/
+    patterns: "*.conf"
+  register: lxc_config_files
+
+- name: Append idmap lines to LXC config files
+  ansible.builtin.blockinfile:
+    path: "{{ item_path.path }}"
+    block: |
+      lxc.idmap: u 0 100000 65536
+      lxc.idmap: g 0 100000 44
+      lxc.idmap: g 44 44 1
+      lxc.idmap: g 45 100045 63
+      lxc.idmap: g 108 104 1
+      lxc.idmap: g 109 100109 65427
+    insertafter: EOF
+  loop: "{{ lxc_config_files.files }}"
+  loop_control:
+    loop_var: item_path
+  when: item_path.path != '/etc/pve/lxc/101.conf'
+
+- name: Append idmap lines and QSV config to 101.conf
+  ansible.builtin.blockinfile:
+    path: "/etc/pve/lxc/101.conf"
+    block: |
+      lxc.cgroup2.devices.allow: c 226:0 rwm
+      lxc.cgroup2.devices.allow: c 226:128 rwm
+      lxc.mount.entry: /dev/dri/renderD128 dev/dri/renderD128 none bind,optional,create=file
+      lxc.idmap: u 0 100000 65536
+      lxc.idmap: g 0 100000 44
+      lxc.idmap: g 44 44 1
+      lxc.idmap: g 45 100045 63
+      lxc.idmap: g 108 104 1
+      lxc.idmap: g 109 100109 65427
+    insertafter: EOF
+
+- name: Recursively change ownership of /mnt/hdd14/data/media/
+  ansible.builtin.file:
+    path: /mnt/hdd14/data/
+    state: directory
+    recurse: true
+    owner: 100000
+    group: 100000
+  become: true

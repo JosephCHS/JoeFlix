@@ -3,46 +3,162 @@
     name:
       - python3
       - python3-pip
-      - wget
+      - curl
+      - sudo
+      - gpg
+      - unzip
+      - rsync
+      - apt-transport-https
+      - xvfb
     state: present
     update_cache: true
 
-- name: Ensure homepage user and group with UID and GID 1000 exist
-  ansible.builtin.user:
-    name: homepage
-    uid: 1000
-    group: homepage
-    groups: joeflix
-    create_home: false
-    shell: /usr/sbin/nologin
-
-- name: Ensure homepage group with GID 1000 exists
-  ansible.builtin.group:
-    name: homepage
-    gid: 1000
+- name: Install prerequisites for apt-key and GPG
+  ansible.builtin.apt:
+    name: gpg
     state: present
 
-- name: Download Homepage
-  ansible.builtin.get_url:
-    url: https://github.com/benphelps/homepage/releases/latest/download/homepage-linux-amd64.zip
-    dest: /opt/homepage.zip
-    mode: '755'
+- name: Add NodeSource GPG key manually
+  ansible.builtin.apt_key:
+    url: https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key
+    state: present
+    keyring: /etc/apt/keyrings/nodesource.gpg
 
-- name: Extract Homepage
+- name: Ensure /opt/homepage directory exists
+  ansible.builtin.file:
+    path: /opt/homepage
+    state: directory
+    mode: '775'
+
+# Setting up Node.js
+- name: Ensure /etc/apt/keyrings directory exists
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '775'
+
+- name: Add Node.js GPG key
+  ansible.builtin.get_url:
+    url: https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key
+    dest: /etc/apt/keyrings/nodesource.gpg
+    mode: '644'
+
+- name: Add Node.js repository
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/nodesource.list
+    content: |
+      deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main
+    mode: '644'
+
+- name: Update APT package index
+  ansible.builtin.apt:
+    update_cache: true
+
+- name: Install Node.js
+  ansible.builtin.apt:
+    name: nodejs
+    state: present
+
+- name: Install pnpm globally via npm
+  community.general.npm:
+    name: pnpm
+    global: true
+
+# Install Homepage from GitHub
+- name: Get the latest Homepage release version
+  ansible.builtin.uri:
+    url: https://api.github.com/repos/gethomepage/homepage/releases/latest
+    return_content: true
+  register: homepage_release_json
+
+- name: Set Homepage release version
+  ansible.builtin.set_fact:
+    homepage_release: "{{ homepage_release_json.json.tag_name | regex_replace('^v', '') }}"
+
+- name: Display message - Installing Homepage
+  ansible.builtin.debug:
+    msg: "Installing Homepage v{{ homepage_release }}"
+
+- name: Download Homepage release
+  ansible.builtin.get_url:
+    url: "https://github.com/gethomepage/homepage/archive/refs/tags/v{{ homepage_release }}.tar.gz"
+    dest: "/tmp/homepage-{{ homepage_release }}.tar.gz"
+    mode: '775'
+
+- name: Create tmp Homepage installation directory
+  ansible.builtin.file:
+    path: /tmp/homepage
+    state: directory
+    mode: '775'
+
+- name: Create Homepage installation directory
+  ansible.builtin.file:
+    path: /opt/homepage
+    state: directory
+    mode: '775'
+
+- name: Extract Homepage release
   ansible.builtin.unarchive:
-    src: /opt/homepage.zip
-    dest: /opt/homepage
+    src: "/tmp/homepage-{{ homepage_release }}.tar.gz"
+    dest: /tmp/homepage
     remote_src: true
-    mode: '755'
-    owner: homepage
-    group: homepage
+
+- name: Move extracted Homepage files to /opt/homepage
+  ansible.builtin.command:
+    cmd: rsync -a /tmp/homepage/homepage-{{ homepage_release }}/ /opt/homepage/
+
+- name: Remove temporary directory after moving files
+  ansible.builtin.file:
+    path: /tmp/homepage
+    state: absent
+
+- name: Create Homepage config directory
+  ansible.builtin.file:
+    path: /opt/homepage/config
+    state: directory
+    mode: '775'
+
+- name: Copy skeleton config to Homepage config directory
+  ansible.builtin.copy:
+    src: /opt/homepage/src/skeleton/
+    dest: /opt/homepage/config/
+    remote_src: true
+    mode: '775'
+
+- name: Install Homepage dependencies using pnpm
+  community.general.npm:
+    path: /opt/homepage
+    production: false
+
+- name: Install Homepage dependencies using pnpm
+  ansible.builtin.command:
+    cmd: pnpm install
+    chdir: /opt/homepage
+  args:
+    creates: /opt/homepage/node_modules  # This ensures 'pnpm install' runs only if node_modules doesn't exist
+
+- name: Build Homepage using pnpm
+  ansible.builtin.command:
+    cmd: pnpm build
+    chdir: /opt/homepage
+  args:
+    creates: /opt/homepage/build  # Assumes that the build directory is created after a successful build
+
+- name: Clean up downloaded files
+  ansible.builtin.file:
+    path: "/tmp/homepage-{{ homepage_release }}.tar.gz"
+    state: absent
+
+- name: Write Homepage version to file
+  ansible.builtin.copy:
+    dest: /opt/homepage_version.txt
+    content: "{{ homepage_release }}"
+    mode: '644'
 
 - name: Ensure user and group has correct rights over extracted files
   ansible.builtin.file:
     path: /opt/homepage
-    owner: homepage
-    group: homepage
-    mode: '755'
+    mode: '775'
     recurse: true
 
 - name: Create systemd service for Homepage
@@ -53,13 +169,15 @@
       [Unit]
       Description=Homepage Daemon
       After=network.target
+      StartLimitIntervalSec=0
 
       [Service]
-      ExecStart=/opt/homepage/homepage
-      User=homepage
-      Group=homepage
-      Restart=on-failure
-      LimitNOFILE=32768
+      Type=simple
+      Restart=always
+      RestartSec=1
+      User=root
+      WorkingDirectory=/opt/homepage/
+      ExecStart=pnpm start
 
       [Install]
       WantedBy=multi-user.target
@@ -73,3 +191,8 @@
     name: homepage
     enabled: true
     state: started
+
+- name: Cleaning up unused and unnecessary package files
+  ansible.builtin.apt:
+    autoremove: true
+    autoclean: true
