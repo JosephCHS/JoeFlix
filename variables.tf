@@ -78,13 +78,13 @@ variable "rootfs" {
     size = string
   })
   default = {
-    storage = "local-zfs"
+    storage = "local-lvm"
     size = "5G"
   }
 }
 
 variable "start" {
-  description = " A boolean that determines if the container is started after creation."
+  description = "A boolean that determines if the container is started after creation."
   type = bool
   default = true
 }
@@ -110,7 +110,8 @@ variable "target_node" {
 variable "template" {
   description = "LXC template to use"
   type = string
-  default = "debian-12-standard_12.2-1_amd64.tar.gz"
+  default = "local:vztmpl/debian-12-standard_12.2-1_amd64.tar.zst"
+  
 }
 
 variable "unprivileged" {
@@ -227,14 +228,14 @@ variable "gotify_container_id" {
   default = 115
 }
 
-variable "token_secret" {
-  description = "A secret token used by Terraform Provider to reach JoeFlix Proxmox."
+variable "pm_password" {
+  description = "(Optional; sensitive; or use environment variable PM_PASS) The password."
   type = string
   sensitive   = true
 }
 
-variable "token_id" {
-  description = "Token ID used by Terraform Provider to reach JoeFlix Proxmox."
+variable "pm_user" {
+  description = "(Optional; or use environment variable PM_USER) The user, remember to include the authentication realm such as myuser@pam or myuser@pve."
   type = string
   sensitive   = true
 }
@@ -247,6 +248,17 @@ variable "password_lxc" {
 
 variable "password_lxc_plex" {
   description = "Password for public LXC container which are exposed to Internet."
+  type = string
+  sensitive = true
+}
+
+variable "ssh_public_keys" {
+  description = "Multi-line string of SSH public keys that will be added to the container. Can be defined using heredoc syntax."
+  default = "NaN"
+}
+
+variable "token_nordvpn" {
+  description = "Allow login without 2FA to NordVPN."
   type = string
   sensitive = true
 }

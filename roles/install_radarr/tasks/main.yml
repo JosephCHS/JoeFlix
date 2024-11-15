@@ -2,41 +2,43 @@
   ansible.builtin.apt:
     name:
       - curl
+      - sudo
       - libmono-cil-dev
       - mediainfo
       - sqlite3
+      - unzip
     state: present
     update_cache: true
 
-- name: Ensure radarr user and group with UID and GID 1000 exist
-  ansible.builtin.user:
-    name: radarr
-    uid: 1000
-    group: radarr
-    groups: joeflix
-    create_home: false
-    shell: /usr/sbin/nologin
-
-- name: Ensure radarr group with GID 1000 exists
-  ansible.builtin.group:
-    name: radarr
-    gid: 1000
-    state: present
+- name: Ensure /var/lib/radarr directory exists
+  ansible.builtin.file:
+    path: /var/lib/radarr
+    state: directory
+    mode: '775'
 
 - name: Download Radarr
   ansible.builtin.get_url:
-    url: https://services.radarr.tv/v1/download/main/latest?version=4&os=linux&arch=x64
+    url: https://radarr.servarr.com/v1/update/master/updatefile?os=linux&runtime=netcore&arch=x64
     dest: /opt/radarr.tar.gz
-    mode: '755'
+    mode: '775'
 
 - name: Extract Radarr
   ansible.builtin.unarchive:
     src: /opt/radarr.tar.gz
-    dest: /opt/radarr
+    dest: /opt/
     remote_src: true
-    owner: radarr
-    group: radarr
-    mode: '755'
+    mode: '775'
+
+- name: Remove Radarr tarball
+  ansible.builtin.file:
+    path: /opt/radarr.tar.gz
+    state: absent
+
+- name: Change ownership of Sonarr directory
+  ansible.builtin.file:
+    path: /opt/Radarr
+    mode: '775'
+    recurse: true
 
 - name: Create systemd service for Radarr
   ansible.builtin.copy:
@@ -45,12 +47,14 @@
     content: |
       [Unit]
       Description=Radarr Daemon
-      After=network.target
+      After=syslog.target network.target
 
       [Service]
-      ExecStart=/opt/radarr/Radarr -nobrowser -data=/opt/Radarr
-      User=radarr
-      Group=radarr
+      UMask=0002
+      Type=simple
+      ExecStart=/opt/Radarr/Radarr -nobrowser -data=/var/lib/radarr/
+      TimeoutStopSec=20
+      KillMode=process
       Restart=on-failure
       LimitNOFILE=32768
 
@@ -66,3 +70,8 @@
     name: radarr
     enabled: true
     state: started
+
+- name: Cleaning up unused and unnecessary package files
+  ansible.builtin.apt:
+    autoremove: true
+    autoclean: true

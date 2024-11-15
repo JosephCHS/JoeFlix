@@ -1,39 +1,83 @@
 - name: Install prerequisites for qBittorrent
   ansible.builtin.apt:
     name:
+      - curl
+      - sudo
       - qbittorrent-nox
     state: present
     update_cache: true
 
-- name: Ensure qbittorrent user and group with UID and GID 1000 exist
-  ansible.builtin.user:
-    name: qbittorrent
-    uid: 1000
-    group: qbittorrent
-    create_home: false
-    shell: /usr/sbin/nologin
+- name: Ensure qBittorrent configuration directory exists
+  ansible.builtin.file:
+    path: "~/.config/qBittorrent"
+    state: directory
+    mode: '755'
 
-- name: Ensure qbittorrent group with GID 1000 exists
-  ansible.builtin.group:
-    name: qbittorrent
-    gid: 1000
-    state: present
+- name: Ensure qBittorrent.conf file exists
+  ansible.builtin.file:
+    path: "~/.config/qBittorrent/qBittorrent.conf"
+    state: touch
+    mode: '644'
+
+- name: Ensure qBittorrent preferences are set in qBittorrent.conf
+  ansible.builtin.blockinfile:
+    path: "~/.config/qBittorrent/qBittorrent.conf"
+    block: |
+      [Preferences]
+      WebUI\Password_PBKDF2="@ByteArray(amjeuVrF3xRbgzqWQmes5A==:XK3/Ra9jUmqUc4RwzCtrhrkQIcYczBl90DJw2rT8DFVTss4nxpoRhvyxhCf87ahVE3SzD8K9lyPdpyUCfmVsUg==)"
+      WebUI\Port=8090
+      WebUI\UseUPnP=false
+      WebUI\Username=admin
+    insertafter: EOF
+
+- name: Download and install NordVPN
+  ansible.builtin.shell:
+    cmd: "sh <(curl -sSf https://downloads.nordcdn.com/apps/linux/install.sh) -y"
+    executable: /bin/bash
+
+- name: Load Vault variables
+  ansible.builtin.include_vars: vault.yml
+
+- name: Log in to NordVPN with token
+  ansible.builtin.command:
+    cmd: "nordvpn login --token {{ token_nordvpn }}"
+
+- name: Whitelist local subnet
+  ansible.builtin.command: "nordvpn whitelist add subnet 192.168.1.0/24"
 
 - name: Create systemd service for qBittorrent
   ansible.builtin.copy:
     dest: /etc/systemd/system/qbittorrent.service
-    mode: '755'
+    mode: '644'
     content: |
       [Unit]
       Description=qBittorrent Daemon
       After=network.target
 
       [Service]
-      ExecStart=/usr/bin/qbittorrent-nox
-      User=qbittorrent
-      Group=qbittorrent
-      Restart=on-failure
+      ExecStart=/usr/bin/qbittorrent-nox --webui-port=8090
+      Restart=always
       LimitNOFILE=32768
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: Create systemd service for NordVPN
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/nordvpn.service
+    mode: '644'
+    content: |
+      [Unit]
+      Description=NordVPN Auto Connect
+      After=network-online.target
+      Wants=network-online.target
+
+      [Service]
+      ExecStart=/usr/bin/nordvpn connect Luxembourg
+      ExecStartPost=/usr/bin/nordvpn set technology nordlynx
+      ExecStartPost=/usr/bin/nordvpn whitelist add subnet 192.168.1.0/24
+      ExecStop=/usr/bin/nordvpn disconnect
+      Restart=on-failure
 
       [Install]
       WantedBy=multi-user.target
@@ -47,3 +91,14 @@
     name: qbittorrent
     enabled: true
     state: started
+
+- name: Enable and start NordVPN service
+  ansible.builtin.systemd:
+    name: nordvpn
+    enabled: true
+    state: started
+
+- name: Cleaning up unused and unnecessary package files
+  ansible.builtin.apt:
+    autoremove: true
+    autoclean: true

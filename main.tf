@@ -6,8 +6,23 @@ resource "proxmox_lxc" "plex_lxc" {
   memory      = 30000
   tags        = "lxc;media"
   vmid        = var.plex_container_id
+  # Non-specific variables
+  nameserver      = join(",", var.dns_servers)
+  onboot          = var.onboot
+  ostemplate      = "local:vztmpl/ubuntu-22.04-standard_22.04-1_amd64.tar.zst"
+  password        = var.password_lxc_plex
+  start           = var.start
+  swap            = var.swap
+  target_node     = var.target_node
+  unprivileged    = var.unprivileged
+  ssh_public_keys = <<-EOT
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGWyUbF2OOv8rBFTb57bwb9sZhfxnSg0Fv1XA8B1FdaT chs.jo@proton.me
+  EOT  
+  features {
+    nesting = true
+  }
   rootfs {
-    storage = "local-zfs"
+    storage = "local-lvm"
     size    = "500G"
   }
   mountpoint {
@@ -18,13 +33,6 @@ resource "proxmox_lxc" "plex_lxc" {
     slot    = "0"
     key     = 0
   }
-  mountpoint {
-    mp     = "/dev/dri"
-    volume = "/dev/dri"
-    size   = "0G"
-    slot   = "1"
-    key    = 1
-  }
   network {
     name     = var.network.name
     bridge   = var.network.bridge
@@ -32,19 +40,6 @@ resource "proxmox_lxc" "plex_lxc" {
     gw       = var.network.gw
     firewall = var.network.firewall
   }
-  # Add a provisioner to run Ansible after the LXC container is created
-  provisioner "local-exec" {
-  command = "ansible-playbook -i hosts.yml main.yml --limit plex"
-  }
-  # Non-specific variables
-  nameserver   = join(",", var.dns_servers)
-  onboot       = var.onboot
-  ostemplate   = "ubuntu-22.04-standard_22.04-1_amd.tar.zst"
-  password     = var.password_lxc_plex
-  start        = var.start
-  swap         = var.swap
-  target_node  = var.target_node
-  unprivileged = var.unprivileged
 }
 
 resource "proxmox_lxc" "radarr_lxc" {
@@ -55,8 +50,23 @@ resource "proxmox_lxc" "radarr_lxc" {
   memory      = 2048
   tags        = "lxc;media"
   vmid        = var.radarr_container_id
+  # Non-specific variables
+  nameserver   = join(",", var.dns_servers)
+  onboot       = var.onboot
+  ostemplate   = var.template
+  password     = var.password_lxc
+  start        = var.start
+  swap         = var.swap
+  target_node  = var.target_node
+  unprivileged = var.unprivileged
+  ssh_public_keys = <<-EOT
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGWyUbF2OOv8rBFTb57bwb9sZhfxnSg0Fv1XA8B1FdaT chs.jo@proton.me
+  EOT  
+  features {
+    nesting = true
+  }
   rootfs {
-    storage = "local-zfs"
+    storage = "local-lvm"
     size    = "10G"
   }
   mountpoint {
@@ -74,19 +84,6 @@ resource "proxmox_lxc" "radarr_lxc" {
     gw       = var.network.gw
     firewall = var.network.firewall
   }
-  # Add a provisioner to run Ansible after the LXC container is created
-  provisioner "local-exec" {
-  command = "ansible-playbook -i hosts.yml main.yml --limit radarr"
-  }
-  # Non-specific variables
-  nameserver   = join(",", var.dns_servers)
-  onboot       = var.onboot
-  ostemplate   = var.template
-  password     = var.password_lxc
-  start        = var.start
-  swap         = var.swap
-  target_node  = var.target_node
-  unprivileged = var.unprivileged
 }
 
 resource "proxmox_lxc" "flaresolverr_lxc" {
@@ -97,21 +94,6 @@ resource "proxmox_lxc" "flaresolverr_lxc" {
   memory      = 2048
   tags        = "lxc;network"
   vmid        = var.flaresolverr_container_id
-  rootfs {
-    size    = "4G"
-    storage = "local-zfs"
-  }
-  network {
-    name     = var.network.name
-    bridge   = var.network.bridge
-    ip       = "192.168.1.${var.flaresolverr_container_id}/24"
-    gw       = var.network.gw
-    firewall = var.network.firewall
-  }
-  # Add a provisioner to run Ansible after the LXC container is created
-  provisioner "local-exec" {
-  command = "ansible-playbook -i hosts.yml main.yml --limit flaresolverr"
-  }
   # Non-specific variables
   nameserver   = join(",", var.dns_servers)
   onboot       = var.onboot
@@ -120,7 +102,24 @@ resource "proxmox_lxc" "flaresolverr_lxc" {
   start        = var.start
   swap         = var.swap
   unprivileged = var.unprivileged
+  ssh_public_keys = <<-EOT
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGWyUbF2OOv8rBFTb57bwb9sZhfxnSg0Fv1XA8B1FdaT chs.jo@proton.me
+  EOT  
   target_node  = var.target_node
+  features {
+    nesting = true
+  }
+  rootfs {
+    size    = "4G"
+    storage = "local-lvm"
+  }
+  network {
+    name     = var.network.name
+    bridge   = var.network.bridge
+    ip       = "192.168.1.${var.flaresolverr_container_id}/24"
+    gw       = var.network.gw
+    firewall = var.network.firewall
+  }
 }
 
 resource "proxmox_lxc" "bazarr_lxc" {
@@ -131,9 +130,24 @@ resource "proxmox_lxc" "bazarr_lxc" {
   hostname    = "bazarr"
   tags        = "lxc;media"
   vmid        = var.bazarr_container_id
+  # Non-specific variables
+  nameserver   = join(",", var.dns_servers)
+  onboot       = var.onboot
+  ostemplate   = var.template
+  password     = var.password_lxc
+  start        = var.start
+  swap         = var.swap
+  unprivileged = var.unprivileged
+  ssh_public_keys = <<-EOT
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGWyUbF2OOv8rBFTb57bwb9sZhfxnSg0Fv1XA8B1FdaT chs.jo@proton.me
+  EOT  
+  target_node  = var.target_node
+  features {
+    nesting = true
+  }
   rootfs {
     size    = "4G"
-    storage = "local-zfs"
+    storage = "local-lvm"
   }
   mountpoint {
     mp      = "/shared"
@@ -150,19 +164,6 @@ resource "proxmox_lxc" "bazarr_lxc" {
     gw       = var.network.gw
     firewall = var.network.firewall
   }
-  # Add a provisioner to run Ansible after the LXC container is created
-  provisioner "local-exec" {
-  command = "ansible-playbook -i hosts.yml main.yml --limit bazarr"
-  }
-  # Non-specific variables
-  nameserver   = join(",", var.dns_servers)
-  onboot       = var.onboot
-  ostemplate   = var.template
-  password     = var.password_lxc
-  start        = var.start
-  swap         = var.swap
-  unprivileged = var.unprivileged
-  target_node  = var.target_node
 }
 
 resource "proxmox_lxc" "calibre_web_lxc" {
@@ -173,9 +174,24 @@ resource "proxmox_lxc" "calibre_web_lxc" {
   memory      = 2048
   tags        = "lxc;media"
   vmid         = var.calibre_web_container_id
+  # Non-specific variables
+  nameserver   = join(",", var.dns_servers)
+  onboot       = var.onboot
+  ostemplate   = var.template
+  password     = var.password_lxc
+  start        = var.start
+  swap         = var.swap
+  unprivileged = var.unprivileged
+  ssh_public_keys = <<-EOT
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGWyUbF2OOv8rBFTb57bwb9sZhfxnSg0Fv1XA8B1FdaT chs.jo@proton.me
+  EOT  
+  target_node  = var.target_node
+  features {
+    nesting = true
+  }
   rootfs {
     size    = "4G"
-    storage = "local-zfs"
+    storage = "local-lvm"
   }
   mountpoint {
     mp      = "/shared"
@@ -192,19 +208,6 @@ resource "proxmox_lxc" "calibre_web_lxc" {
     gw       = var.network.gw
     firewall = var.network.firewall
   }
-  # Add a provisioner to run Ansible after the LXC container is created
-  provisioner "local-exec" {
-  command = "ansible-playbook -i hosts.yml main.yml --limit calibre_web"
-  }
-  # Non-specific variables
-  nameserver   = join(",", var.dns_servers)
-  onboot       = var.onboot
-  ostemplate   = var.template
-  password     = var.password_lxc
-  start        = var.start
-  swap         = var.swap
-  unprivileged = var.unprivileged
-  target_node  = var.target_node
 }
 
 resource "proxmox_lxc" "lidarr_lxc" {
@@ -215,8 +218,23 @@ resource "proxmox_lxc" "lidarr_lxc" {
   hostname    = "lidarr"
   tags        = "lxc;media"
   vmid        = var.lidarr_container_id
+  # Non-specific variables
+  nameserver   = join(",", var.dns_servers)
+  onboot       = var.onboot
+  ostemplate   = var.template
+  password     = var.password_lxc
+  start        = var.start
+  swap         = var.swap
+  target_node  = var.target_node
+  unprivileged = var.unprivileged
+  ssh_public_keys = <<-EOT
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGWyUbF2OOv8rBFTb57bwb9sZhfxnSg0Fv1XA8B1FdaT chs.jo@proton.me
+  EOT  
+  features {
+    nesting = true
+  }
   rootfs {
-    storage = "local-zfs"
+    storage = "local-lvm"
     size    = "4G"
   }
   mountpoint {
@@ -234,19 +252,6 @@ resource "proxmox_lxc" "lidarr_lxc" {
     gw       = var.network.gw
     firewall = var.network.firewall
   }
-  # Add a provisioner to run Ansible after the LXC container is created
-  provisioner "local-exec" {
-  command = "ansible-playbook -i hosts.yml main.yml --limit lidarr"
-  }
-  # Non-specific variables
-  nameserver   = join(",", var.dns_servers)
-  onboot       = var.onboot
-  ostemplate   = var.template
-  password     = var.password_lxc
-  start        = var.start
-  swap         = var.swap
-  target_node  = var.target_node
-  unprivileged = var.unprivileged
 }
 
 resource "proxmox_lxc" "overseerr_lxc" {
@@ -257,21 +262,6 @@ resource "proxmox_lxc" "overseerr_lxc" {
   memory      = 4096
   tags        = "lxc;media"
   vmid        = var.overseerr_container_id
-  rootfs {
-    storage = "local-zfs"
-    size    = "8G"
-  }
-  network {
-    name     = var.network.name
-    bridge   = var.network.bridge
-    ip       = "192.168.1.${var.overseerr_container_id}/24"
-    gw       = var.network.gw
-    firewall = var.network.firewall
-  }
-  # Add a provisioner to run Ansible after the LXC container is created
-  provisioner "local-exec" {
-  command = "ansible-playbook -i hosts.yml main.yml --limit overseer"
-  }
   # Non-specific variables
   nameserver   = join(",", var.dns_servers)
   onboot       = var.onboot
@@ -281,6 +271,23 @@ resource "proxmox_lxc" "overseerr_lxc" {
   swap         = var.swap
   target_node  = var.target_node
   unprivileged = var.unprivileged
+  ssh_public_keys = <<-EOT
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGWyUbF2OOv8rBFTb57bwb9sZhfxnSg0Fv1XA8B1FdaT chs.jo@proton.me
+  EOT  
+  features {
+    nesting = true
+  }
+  rootfs {
+    storage = "local-lvm"
+    size    = "8G"
+  }
+  network {
+    name     = var.network.name
+    bridge   = var.network.bridge
+    ip       = "192.168.1.${var.overseerr_container_id}/24"
+    gw       = var.network.gw
+    firewall = var.network.firewall
+  }
 }
 
 resource "proxmox_lxc" "prowlarr_lxc" {
@@ -291,21 +298,6 @@ resource "proxmox_lxc" "prowlarr_lxc" {
   memory      = 2048
   tags        = "lxc;media"
   vmid        = var.prowlarr_container_id
-  rootfs {
-    storage = "local-zfs"
-    size    = "4G"
-  }
-  network {
-    name     = var.network.name
-    bridge   = var.network.bridge
-    ip       = "192.168.1.${var.prowlarr_container_id}/24"
-    gw       = var.network.gw
-    firewall = var.network.firewall
-  }
-  # Add a provisioner to run Ansible after the LXC container is created
-  provisioner "local-exec" {
-  command = "ansible-playbook -i hosts.yml main.yml --limit prowlarr"
-  }
   # Non-specific variables
   nameserver    = join(",", var.dns_servers)
   onboot        = var.onboot
@@ -315,6 +307,23 @@ resource "proxmox_lxc" "prowlarr_lxc" {
   start         = var.start
   target_node   = var.target_node
   unprivileged  = var.unprivileged
+  ssh_public_keys = <<-EOT
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGWyUbF2OOv8rBFTb57bwb9sZhfxnSg0Fv1XA8B1FdaT chs.jo@proton.me
+  EOT    
+  features {
+    nesting = true
+  }
+  rootfs {
+    storage = "local-lvm"
+    size    = "4G"
+  }
+  network {
+    name     = var.network.name
+    bridge   = var.network.bridge
+    ip       = "192.168.1.${var.prowlarr_container_id}/24"
+    gw       = var.network.gw
+    firewall = var.network.firewall
+  }
 }
 
 resource "proxmox_lxc" "readarr_lxc" {
@@ -325,8 +334,23 @@ resource "proxmox_lxc" "readarr_lxc" {
   memory      = 2048
   tags        = "lxc;media"
   vmid        = var.readarr_container_id
+  # Non-specific variables
+  nameserver   = join(",", var.dns_servers)
+  onboot       = var.onboot
+  ostemplate   = var.template
+  password     = var.password_lxc
+  start        = var.start
+  swap         = var.swap
+  target_node  = var.target_node
+  unprivileged = var.unprivileged
+  ssh_public_keys = <<-EOT
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGWyUbF2OOv8rBFTb57bwb9sZhfxnSg0Fv1XA8B1FdaT chs.jo@proton.me
+  EOT  
+  features {
+    nesting = true
+  }
   rootfs {
-    storage = "local-zfs"
+    storage = "local-lvm"
     size    = "4G"
   }
   mountpoint {
@@ -344,19 +368,6 @@ resource "proxmox_lxc" "readarr_lxc" {
     gw       = var.network.gw
     firewall = var.network.firewall
   }
-  # Add a provisioner to run Ansible after the LXC container is created
-  provisioner "local-exec" {
-  command = "ansible-playbook -i hosts.yml main.yml --limit readarr"
-  }
-  # Non-specific variables
-  nameserver   = join(",", var.dns_servers)
-  onboot       = var.onboot
-  ostemplate   = var.template
-  password     = var.password_lxc
-  start        = var.start
-  swap         = var.swap
-  target_node  = var.target_node
-  unprivileged = var.unprivileged
 }
 
 resource "proxmox_lxc" "sonarr_lxc" {
@@ -367,9 +378,24 @@ resource "proxmox_lxc" "sonarr_lxc" {
   memory      = 2048
   tags        = "lxc;media"
   vmid        = var.sonarr_container_id
+  # Non-specific variables
+  nameserver   = join(",", var.dns_servers)
+  onboot       = var.onboot
+  ostemplate   = var.template
+  password     = var.password_lxc
+  start        = var.start
+  swap         = var.swap
+  target_node  = var.target_node
+  unprivileged = var.unprivileged
+  ssh_public_keys = <<-EOT
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGWyUbF2OOv8rBFTb57bwb9sZhfxnSg0Fv1XA8B1FdaT chs.jo@proton.me
+  EOT  
+  features {
+    nesting = true
+  }
   rootfs {
     size    = "5G"
-    storage = "local-zfs"
+    storage = "local-lvm"
   }
   mountpoint {
     mp      = "/shared"
@@ -386,19 +412,6 @@ resource "proxmox_lxc" "sonarr_lxc" {
     gw       = var.network.gw
     firewall = var.network.firewall
   }
-  # Add a provisioner to run Ansible after the LXC container is created
-  provisioner "local-exec" {
-  command = "ansible-playbook -i hosts.yml main.yml --limit sonarr"
-  }
-  # Non-specific variables
-  nameserver   = join(",", var.dns_servers)
-  onboot       = var.onboot
-  ostemplate   = var.template
-  password     = var.password_lxc
-  start        = var.start
-  swap         = var.swap
-  target_node  = var.target_node
-  unprivileged = var.unprivileged
 }
 
 resource "proxmox_lxc" "tautulli_lxc" {
@@ -409,21 +422,6 @@ resource "proxmox_lxc" "tautulli_lxc" {
   memory      = 1024
   tags        = "lxc;media"
   vmid        = var.tautulli_container_id
-  network {
-    name     = var.network.name
-    bridge   = var.network.bridge
-    ip       = "192.168.1.${var.tautulli_container_id}/24"
-    gw       = var.network.gw
-    firewall = var.network.firewall
-  }
-  rootfs {
-    storage = "local-zfs"
-    size    = "4G"
-  }
-  # Add a provisioner to run Ansible after the LXC container is created
-  provisioner "local-exec" {
-  command = "ansible-playbook -i hosts.yml main.yml --limit tautulli"
-  }
   # Non-specific variables
   nameserver   = join(",", var.dns_servers)
   onboot       = var.onboot
@@ -433,6 +431,23 @@ resource "proxmox_lxc" "tautulli_lxc" {
   swap         = var.swap
   target_node  = var.target_node
   unprivileged = var.unprivileged
+  ssh_public_keys = <<-EOT
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGWyUbF2OOv8rBFTb57bwb9sZhfxnSg0Fv1XA8B1FdaT chs.jo@proton.me
+  EOT  
+  network {
+    name     = var.network.name
+    bridge   = var.network.bridge
+    ip       = "192.168.1.${var.tautulli_container_id}/24"
+    gw       = var.network.gw
+    firewall = var.network.firewall
+  }
+  features {
+    nesting = true
+  }
+  rootfs {
+    storage = "local-lvm"
+    size    = "4G"
+  }
 }
 
 resource "proxmox_lxc" "kavita_lxc" {
@@ -443,8 +458,23 @@ resource "proxmox_lxc" "kavita_lxc" {
   memory      = 4096
   tags        = "lxc;media"
   vmid        = var.kavita_container_id
+  # Non-specific variables
+  nameserver   = join(",", var.dns_servers)
+  onboot       = var.onboot
+  ostemplate   = var.template
+  password     = var.password_lxc
+  start        = var.start
+  swap         = var.swap
+  target_node  = var.target_node
+  unprivileged = var.unprivileged
+  ssh_public_keys = <<-EOT
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGWyUbF2OOv8rBFTb57bwb9sZhfxnSg0Fv1XA8B1FdaT chs.jo@proton.me
+  EOT  
+  features {
+    nesting = true
+  }
   rootfs {
-    storage = "local-zfs"
+    storage = "local-lvm"
     size    = "10G"
   }
   mountpoint {
@@ -462,10 +492,16 @@ resource "proxmox_lxc" "kavita_lxc" {
     gw       = var.network.gw
     firewall = var.network.firewall
   }
-  # Add a provisioner to run Ansible after the LXC container is created
-  provisioner "local-exec" {
-  command = "ansible-playbook -i hosts.yml main.yml --limit kavita"
-  }
+}
+
+resource "proxmox_lxc" "homepage_lxc" {
+  # Specific variables
+  cores       = 1
+  description = "A customizable, dashboard-like homepage for quick access to frequently used services and information."
+  hostname    = "homepage"
+  memory      = 1024
+  tags        = "lxc;dashboard"
+  vmid        = var.homepage_container_id
   # Non-specific variables
   nameserver   = join(",", var.dns_servers)
   onboot       = var.onboot
@@ -475,17 +511,15 @@ resource "proxmox_lxc" "kavita_lxc" {
   swap         = var.swap
   target_node  = var.target_node
   unprivileged = var.unprivileged
-}
-resource "proxmox_lxc" "homepage_lxc" {
-  cores       = 1
-  description = "A customizable, dashboard-like homepage for quick access to frequently used services and information."
-  hostname    = "homepage"
-  memory      = 1024
-  tags        = "lxc;dashboard"
-  vmid        = var.homepage_container_id
+  ssh_public_keys = <<-EOT
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGWyUbF2OOv8rBFTb57bwb9sZhfxnSg0Fv1XA8B1FdaT chs.jo@proton.me
+  EOT
+  features {
+    nesting = true
+  }
   rootfs {
     size    = "3G"
-    storage = "local-zfs"
+    storage = "local-lvm"
   }
   network {
     name     = var.network.name
@@ -494,19 +528,6 @@ resource "proxmox_lxc" "homepage_lxc" {
     gw       = var.network.gw
     firewall = var.network.firewall
   }
-  # Add a provisioner to run Ansible after the LXC container is created
-  provisioner "local-exec" {
-  command = "ansible-playbook -i hosts.yml main.yml --limit homepage"
-  }
-  # Non-specific variables
-  nameserver   = join(",", var.dns_servers)
-  onboot       = var.onboot
-  ostemplate   = var.template
-  password     = var.password_lxc
-  start        = var.start
-  swap         = var.swap
-  target_node  = var.target_node
-  unprivileged = var.unprivileged
 }
 
 resource "proxmox_lxc" "qbittorrent_lxc" {
@@ -517,8 +538,23 @@ resource "proxmox_lxc" "qbittorrent_lxc" {
   memory      = 6000
   tags        = "lxc;media"
   vmid        = var.qbittorrent_container_id
+  # Non-specific variables
+  nameserver   = join(",", var.dns_servers)
+  onboot       = var.onboot
+  ostemplate   = var.template
+  password     = var.password_lxc
+  start        = var.start
+  swap         = var.swap
+  target_node  = var.target_node
+  unprivileged = var.unprivileged
+  ssh_public_keys = <<-EOT
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGWyUbF2OOv8rBFTb57bwb9sZhfxnSg0Fv1XA8B1FdaT chs.jo@proton.me
+  EOT
+  features {
+    nesting = true
+  }
   rootfs {
-    storage = "local-zfs"
+    storage = "local-lvm"
     size    = "10G"
   }
   mountpoint {
@@ -536,19 +572,6 @@ resource "proxmox_lxc" "qbittorrent_lxc" {
     gw       = var.network.gw
     firewall = var.network.firewall
   }
-  # Add a provisioner to run Ansible after the LXC container is created
-  provisioner "local-exec" {
-  command = "ansible-playbook -i hosts.yml main.yml --limit qbittorrent"
-  }
-  # Non-specific variables
-  nameserver   = join(",", var.dns_servers)
-  onboot       = var.onboot
-  ostemplate   = var.template
-  password     = var.password_lxc
-  start        = var.start
-  swap         = var.swap
-  target_node  = var.target_node
-  unprivileged = var.unprivileged
 }
 
 resource "proxmox_lxc" "gotify_lxc" {
@@ -559,21 +582,6 @@ resource "proxmox_lxc" "gotify_lxc" {
   memory      = 1024
   tags        = "lxc;communication"
   vmid        = var.gotify_container_id
-  rootfs {
-    size    = "2G"
-    storage = "local-zfs"
-  }
-  network {
-    name     = var.network.name
-    bridge   = var.network.bridge
-    ip       = "192.168.1.${var.gotify_container_id}/24"
-    gw       = var.network.gw
-    firewall = var.network.firewall
-  }
-  # Add a provisioner to run Ansible after the LXC container is created
-  provisioner "local-exec" {
-  command = "ansible-playbook -i hosts.yml main.yml --limit gotify"
-  }
   # Non-specific variables
   nameserver   = join(",", var.dns_servers)
   onboot       = var.onboot
@@ -583,4 +591,48 @@ resource "proxmox_lxc" "gotify_lxc" {
   swap         = var.swap
   target_node  = var.target_node
   unprivileged = var.unprivileged
+  ssh_public_keys = <<-EOT
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGWyUbF2OOv8rBFTb57bwb9sZhfxnSg0Fv1XA8B1FdaT chs.jo@proton.me
+  EOT
+  features {
+    nesting = true
+  }
+  rootfs {
+    size    = "2G"
+    storage = "local-lvm"
+  }
+  network {
+    name     = var.network.name
+    bridge   = var.network.bridge
+    ip       = "192.168.1.${var.gotify_container_id}/24"
+    gw       = var.network.gw
+    firewall = var.network.firewall
+  }
+}
+
+resource "null_resource" "proxmox_post_tasks" {
+  depends_on = [
+    proxmox_lxc.plex_lxc,
+    proxmox_lxc.radarr_lxc,
+    proxmox_lxc.sonarr_lxc,
+    proxmox_lxc.bazarr_lxc,
+    proxmox_lxc.lidarr_lxc,
+    proxmox_lxc.prowlarr_lxc,
+    proxmox_lxc.readarr_lxc,
+    proxmox_lxc.overseerr_lxc,
+    proxmox_lxc.flaresolverr_lxc,
+    proxmox_lxc.tautulli_lxc,
+    proxmox_lxc.calibre_web_lxc,
+    proxmox_lxc.kavita_lxc,
+    proxmox_lxc.qbittorrent_lxc,
+    proxmox_lxc.homepage_lxc,
+    proxmox_lxc.gotify_lxc
+  ]
+
+  provisioner "local-exec" {
+    command = "ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i hosts.yml main.yml --forks=15"
+    environment = {
+      ANSIBLE_HOST_KEY_CHECKING = "False"
+    }
+  }
 }

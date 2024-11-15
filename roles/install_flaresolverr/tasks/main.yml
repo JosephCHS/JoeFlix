@@ -1,42 +1,81 @@
 - name: Install prerequisites for Flaresolverr
   ansible.builtin.apt:
     name:
-      - openjdk-11-jre
-      - wget
+      - curl
+      - sudo
+      - apt-transport-https
+      - gpg
+      - xvfb
       - unzip
     state: present
     update_cache: true
 
-- name: Ensure flaresolverr user and group with UID and GID 1000 exist
-  ansible.builtin.user:
-    name: flaresolverr
-    uid: 1000
-    group: flaresolverr
-    groups: joeflix
-    create_home: false
+- name: Add Google Chrome GPG key
+  ansible.builtin.apt_key:
+    url: https://dl.google.com/linux/linux_signing_key.pub
     state: present
-    shell: /usr/sbin/nologin
+    keyring: /usr/share/keyrings/google-chrome.gpg
 
-- name: Ensure flaresolverr group with GID 1000 exists
-  ansible.builtin.group:
-    name: flaresolverr
-    gid: 1000
+- name: Add Google Chrome repository
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/google-chrome.list
+    content: |
+      deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main
+    mode: '644'
+
+- name: Update APT package index
+  ansible.builtin.apt:
+    update_cache: true
+
+- name: Install Google Chrome
+  ansible.builtin.apt:
+    name: google-chrome-stable
     state: present
 
+- name: Get latest FlareSolverr release version
+  ansible.builtin.uri:
+    url: https://github.com/FlareSolverr/FlareSolverr/releases/latest
+    return_content: true
+    headers:
+      Accept: "text/html"
+  register: flaresolverr_release_html
 
-- name: Download Flaresolverr
+- name: Extract FlareSolverr release version
+  ansible.builtin.set_fact:
+    flaresolverr_release: "{{ flaresolverr_release_html.content | regex_search('href=\"/FlareSolverr/FlareSolverr/releases/tag/v([\\d.]+)\"', '\\1') }}"
+
+- name: Debug version
+  ansible.builtin.debug:
+    msg: "FlareSolverr latest release is: {{ flaresolverr_release }}"
+
+- name: Download FlareSolverr tarball
   ansible.builtin.get_url:
-    url: https://github.com/FlareSolverr/FlareSolverr/releases/download/v3.3.21/flaresolverr_linux_x64.tar.gz
-    dest: /opt/flaresolverr.zip
-    mode: '755'
+    url: https://github.com/FlareSolverr/FlareSolverr/releases/download/v{{ flaresolverr_release[0] }}/flaresolverr_linux_x64.tar.gz
+    dest: /tmp/flaresolverr_linux_x64.tar.gz
+    mode: '775'
 
-- name: Extract Flaresolverr
+- name: Extract FlareSolverr tarball to /opt
   ansible.builtin.unarchive:
-    src: /opt/flaresolverr.zip
-    dest: /opt/flaresolverr
+    src: /tmp/flaresolverr_linux_x64.tar.gz
+    dest: /opt/
     remote_src: true
-    owner: flaresolverr
-    group: flaresolverr
+
+- name: Ensure user and group has correct rights over extracted files
+  ansible.builtin.file:
+    path: /opt/flaresolverr
+    mode: '775'
+    recurse: true
+
+- name: Remove FlareSolverr tarball
+  ansible.builtin.file:
+    path: /tmp/flaresolverr_linux_x64.tar.gz
+    state: absent
+
+- name: Write FlareSolverr version to file
+  ansible.builtin.copy:
+    dest: /opt/flaresolverr_version.txt
+    content: "{{ flaresolverr_release }}"
+    mode: '644'
 
 - name: Create systemd service for Flaresolverr
   ansible.builtin.copy:
@@ -48,11 +87,15 @@
       After=network.target
 
       [Service]
+      SyslogIdentifier=flaresolverr
+      Restart=always
+      RestartSec=5
+      Type=simple
+      Environment="LOG_LEVEL=info"
+      Environment="CAPTCHA_SOLVER=none"
+      WorkingDirectory=/opt/flaresolverr
       ExecStart=/opt/flaresolverr/flaresolverr
-      User=flaresolverr
-      Group=flaresolverr
-      Restart=on-failure
-      LimitNOFILE=32768
+      TimeoutStopSec=30
 
       [Install]
       WantedBy=multi-user.target
@@ -66,3 +109,8 @@
     name: flaresolverr
     enabled: true
     state: started
+
+- name: Cleaning up unused and unnecessary package files
+  ansible.builtin.apt:
+    autoremove: true
+    autoclean: true

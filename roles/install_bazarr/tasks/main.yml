@@ -4,48 +4,42 @@
       - python3
       - python3-pip
       - python3-setuptools
-      - git
       - curl
+      - tar
+      - systemd
+      - unzip
+      - sudo
     state: present
     update_cache: true
 
-- name: Ensure bazarr user and group with UID and GID 1000 exist
-  ansible.builtin.user:
-    name: bazarr
-    uid: 1000
-    group: bazarr
-    groups: joeflix
-    state: present
-    create_home: false
-    shell: /usr/sbin/nologin
-
-- name: Ensure bazarr group with GID 1000 exists
-  ansible.builtin.group:
-    name: bazarr
-    gid: 1000
-    state: present
+- name: Ensure /var/lib/bazarr directory exists
+  ansible.builtin.file:
+    path: /var/lib/bazarr
+    state: directory
+    mode: '775'
 
 - name: Download Bazarr
   ansible.builtin.get_url:
     url: https://github.com/morpheus65535/bazarr/releases/latest/download/bazarr.zip
     dest: /opt/bazarr.zip
-    mode: '755'
+    mode: '775'
 
 - name: Extract Bazarr
   ansible.builtin.unarchive:
     src: /opt/bazarr.zip
-    dest: /opt/bazarr
+    dest: /opt/
     remote_src: true
-    mode: '755'
-    owner: bazarr
-    group: bazarr
+    mode: '775'
+
+- name: Clean up the downloaded zip
+  ansible.builtin.file:
+    path: /opt/bazarr.zip
+    state: absent
 
 - name: Ensure user and group has correct rights over extracted files
   ansible.builtin.file:
     path: /opt/bazarr
-    owner: bazarr
-    group: bazarr
-    mode: '755'
+    mode: '775'
     recurse: true
 
 - name: Create systemd service for Bazarr
@@ -55,14 +49,19 @@
     content: |
       [Unit]
       Description=Bazarr Daemon
-      After=network.target
+      After=syslog.target network.target
 
       [Service]
-      ExecStart=/opt/bazarr/Bazarr --nobrowser --data=/opt/bazarr
-      User=bazarr
-      Group=bazarr
+      WorkingDirectory=/opt/bazarr/
+      UMask=0002
       Restart=on-failure
-      LimitNOFILE=32768
+      RestartSec=5
+      Type=simple
+      ExecStart=/usr/bin/python3 /opt/bazarr/bazarr.py
+      KillSignal=SIGINT
+      TimeoutStopSec=20
+      SyslogIdentifier=bazarr
+      LimitNOFILE=16384
 
       [Install]
       WantedBy=multi-user.target
@@ -76,3 +75,8 @@
     name: bazarr
     enabled: true
     state: started
+
+- name: Cleaning up unused and unnecessary package files
+  ansible.builtin.apt:
+    autoremove: true
+    autoclean: true
