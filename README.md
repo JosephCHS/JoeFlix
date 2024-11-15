@@ -100,9 +100,10 @@ The services are hosted on the following containers with their respective IPs:
 
 1. Clone the repository:
    ```bash
-   git clone <repository-url>
-   cd joeflix
+   git clone https://github.com/JosephCHS/JoeFlix
+   cd JoeFlix
     ```
+
 2. Initialize Terraform:
     ```bash
     terraform init
@@ -118,7 +119,6 @@ The services are hosted on the following containers with their respective IPs:
 ### Ansible Configuration
 
 1. Ensure the `hosts.yml` file reflects the IP addresses of your containers.
-
 2. Execute the playbook:
     ```bash
     ansible-playbook main.yml
@@ -127,7 +127,6 @@ The services are hosted on the following containers with their respective IPs:
 ### Post-Provisioning Tasks
 
 1. Mount `/dev/dri` in the Plex LXC for hardware transcoding.
-
 2. Assign correct file permissions on /mnt/hdd14/data/media.
 
 ------------------------------
@@ -135,11 +134,11 @@ The services are hosted on the following containers with their respective IPs:
 ### Services
 Each service is deployed with optimized configurations for its role. Notable setups include:
 
-Plex: Libraries for Movies (/shared/movies), Series (/shared/series), and Music (/shared/music).
-Radarr/Sonarr: Configured for French audio/subtitles when available.
-Bazarr: Handles subtitle downloads and synchronization.
-qBittorrent: Integrated with Sonarr and Radarr for automated downloading.
-Homepage: Provides a centralized dashboard for easy access to all services.
+* Plex: Libraries for Movies (`/shared/movies`), Series (`/shared/series`), and Music (`/shared/music`).
+* Radarr/Sonarr: Configured for French audio/subtitles when available.
+* Bazarr: Handles subtitle downloads and synchronization.
+* qBittorrent: Integrated with Sonarr and Radarr for automated downloading.
+* Homepage: Provides a centralized dashboard for easy access to all services.
 
 ------------------------------
 
@@ -166,8 +165,7 @@ JoeFlix prioritizes media availability over backup, given the non-critical natur
 ### Future Enhancements
 
 * Enable container monitoring and alerts.
-* Add integration for automated photo backups with Immich.
-* Explore additional media services for audiobooks or live TV.
+* Automate arr services setup, especially the part with their secret API
 
 ### Contributing
 Contributions are welcome! Please submit a pull request or open an issue for any suggestions or bugs.
