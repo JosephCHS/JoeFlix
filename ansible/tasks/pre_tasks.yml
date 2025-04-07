@@ -1,0 +1,14 @@
+---
+- name: Update package cache
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Create required directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '775'
+  loop:
+    - "{{ media_path }}"
+    - "{{ download_path }}"

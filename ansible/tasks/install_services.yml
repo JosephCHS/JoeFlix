@@ -1,0 +1,5 @@
+---
+- name: Install media management services
+  ansible.builtin.include_role:
+    name: "install_{{ service_name }}"
+  when: service_name is defined

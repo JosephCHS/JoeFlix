@@ -15,16 +15,16 @@ JoeFlix is a self-hosted media server ecosystem designed to automate the deploym
   - [Prerequisites](#prerequisites)
   - [Setup Instructions](#setup-instructions)
     - [Proxmox Setup](#proxmox-setup)
-    - [Terraform Setup](#terraform-setup)
-    - [Ansible Configuration](#ansible-configuration)
-    - [Post-Provisioning Tasks](#post-provisioning-tasks)
-    - [Services](#services)
-    - [Technical Details](#technical-details)
-    - [Backup and Retention](#backup-and-retention)
-    - [Usage](#usage)
-    - [Future Enhancements](#future-enhancements)
-    - [Contributing](#contributing)
-    - [License](#license)
+    - [Infrastructure Deployment](#infrastructure-deployment)
+    - [Service Ports](#service-ports)
+  - [Storage Structure](#storage-structure)
+  - [Backup Strategy](#backup-strategy)
+  - [Troubleshooting](#troubleshooting)
+  - [Key Features](#key-features)
+  - [Security](#security)
+  - [Development](#development)
+  - [Quick Start](#quick-start)
+  - [License](#license)
 
 ---
 
@@ -77,13 +77,13 @@ The services are hosted on the following containers with their respective IPs:
 ## Prerequisites
 
 1. **Proxmox VE** installed and configured.
-2. Terraform installed on your local machine.
+2. OpenTofu (Terraform fork) v1.9.0+ installed on your local machine.
 3. Ansible installed on your local machine or control node.
-4. A server with:
+4. A server with (my current setup):
    - 14TB HDD for media storage.
    - 800GB NVMe SSD for container storage.
    - 48GB RAM or more.
-   - 4 CPU threads.
+   - 4 CPU threads or more.
 5. Intel processor with QSV support for Plex hardware transcoding.
 
 ---
@@ -92,85 +92,182 @@ The services are hosted on the following containers with their respective IPs:
 
 ### Proxmox Setup
 
-1. Install Proxmox on your server.
-2. Ensure your network is properly configured for static IPs.
-3. Create a storage pool for containers (`local-lvm`) and media (`/mnt/hdd14/data/media`).
+1. Install Proxmox on your server
+2. Configure network for static IPs
+3. Create storage pools:
+   - `local-lvm`: for container storage (SSD)
+   - `/mnt/hdd14/data/media`: for media storage (HDD)
+4. Enable hardware transcoding in BIOS/UEFI
 
-### Terraform Setup
+### Infrastructure Deployment
 
 1. Clone the repository:
-   ```bash
-   git clone <repository-url>
-   cd joeflix
-    ```
-2. Initialize Terraform:
-    ```bash
-    terraform init
-    ```
+```bash
+git clone https://github.com/yourusername/joeflix.git
+cd joeflix
+```
 
-3. Customize the `main.tf` to match your Proxmox configuration.
+2. Configure environment:
+```bash
+cd opentofu/joeflix_containers
+cp secrets.auto.tfvars.example secrets.auto.tfvars
+vim secrets.auto.tfvars  # Edit with your credentials
+```
 
-4. Deploy the LXC containers:
-    ```bash
-    terraform apply
-    ```
+3. Deploy infrastructure:
+```bash
+tofu init
+tofu apply
+```
 
-### Ansible Configuration
+4. Configure services:
+```bash
+cd ../../ansible
+ansible-playbook main.yml
+```
 
-1. Ensure the `hosts.yml` file reflects the IP addresses of your containers.
+### Service Ports
 
-2. Execute the playbook:
-    ```bash
-    ansible-playbook main.yml
-    ```
-    
-### Post-Provisioning Tasks
+| Service      | Port  | Description                    |
+|--------------|-------|--------------------------------|
+| Plex         | 32400 | Main interface                 |
+| Radarr       | 7878  | Movie management              |
+| Sonarr       | 8989  | TV show management            |
+| Bazarr       | 6767  | Subtitle management           |
+| Lidarr       | 8686  | Music management              |
+| Prowlarr     | 9696  | Indexer management            |
+| Readarr      | 8787  | Book management               |
+| Overseerr    | 5055  | Request management            |
+| FlareSolverr | 8191  | Proxy service                 |
+| Tautulli     | 8181  | Plex monitoring               |
+| Calibre-Web  | 8083  | eBook management              |
+| Kavita       | 5000  | Comic/manga management        |
+| qBittorrent  | 8090  | Torrent client                |
+| Homepage     | 3000  | Dashboard                     |
+| Gotify       | 8080  | Notifications                 |
 
-1. Mount `/dev/dri` in the Plex LXC for hardware transcoding.
+---
 
-2. Assign correct file permissions on /mnt/hdd14/data/media.
+## Storage Structure
 
-------------------------------
+```
+/mnt/hdd14/data/
+├── media/
+│   ├── movies/
+│   ├── tv/
+│   ├── music/
+│   ├── books/
+│   └── comics/
+└── downloads/
+    ├── movies/
+    ├── tv/
+    └── music/
+```
 
-### Services
-Each service is deployed with optimized configurations for its role. Notable setups include:
+---
 
-Plex: Libraries for Movies (/shared/movies), Series (/shared/series), and Music (/shared/music).
-Radarr/Sonarr: Configured for French audio/subtitles when available.
-Bazarr: Handles subtitle downloads and synchronization.
-qBittorrent: Integrated with Sonarr and Radarr for automated downloading.
-Homepage: Provides a centralized dashboard for easy access to all services.
+## Backup Strategy
 
-------------------------------
+1. **Container Backups**:
+   - Weekly automated backups using Proxmox backup feature
+   - Retention: 4 weeks
 
-### Technical Details
-UID/GID Mapping: Ensures consistency across host and containers, using UID 1000 and GID 1000.
-QSV Hardware Transcoding: Configured for Plex with proper group memberships (video and render).
-Terraform Null Resources: Used to execute Ansible playbooks after container creation.
+2. **Media Backups**:
+   - Important configuration files backed up daily
+   - Media files excluded from backup (too large)
 
-------------------------------
+---
 
-### Backup and Retention
-JoeFlix prioritizes media availability over backup, given the non-critical nature of the data. However:
+## Troubleshooting
 
-* Media Files: No backups; files can be re-downloaded.
-* Critical Configurations: Backup essential configurations (Terraform, Ansible) externally.
+Common issues and solutions:
 
-------------------------------
+1. **Hardware Transcoding Issues**:
+   - Verify `/dev/dri` is mounted in Plex container
+   - Check Intel drivers are properly installed
 
-### Usage
-* Access the dashboard via `http://192.168.1.114`.
-* Configure Radarr, Sonarr, and Lidarr to manage your media libraries.
-* Share Plex with external users using the configured external access.
+2. **Network Connectivity**:
+   - Verify container IP assignments
+   - Check firewall rules
+   - Ensure DNS resolution works
 
-### Future Enhancements
+3. **Storage Issues**:
+   - Check mount permissions
+   - Verify storage pools are properly mounted
 
-* Enable container monitoring and alerts.
-* Add integration for automated photo backups with Immich.
-* Explore additional media services for audiobooks or live TV.
+---
 
-### Contributing
-Contributions are welcome! Please submit a pull request or open an issue for any suggestions or bugs.
+## Key Features
 
-### License
-This project is licensed under the MIT License. See the LICENSE file for details.
+- Intel QSV hardware transcoding
+- French media localization
+- NordVPN integration for qBittorrent
+- Automatic media organization
+- Cross-service integration
+- Centralized notification system
+- Container-level isolation
+- Automated deployment
+
+---
+
+## Security
+
+- Unprivileged LXC containers
+- NordVPN for secure downloads
+- Service-specific credentials
+- Network isolation
+
+---
+
+## Development
+
+Built with:
+- OpenTofu (Terraform fork)
+- Ansible
+- Proxmox LXC
+- Debian 12/Ubuntu 22.04 base images
+
+---
+
+## Quick Start
+
+The project includes a Makefile for easy management. Here are the available commands:
+
+```bash
+# Initialize the project
+make init
+
+# Plan infrastructure changes
+make plan
+
+# Apply infrastructure changes
+make apply
+
+# Update all services
+make update
+
+# Create a backup
+make backup
+
+# Edit vault secrets
+make vault-edit
+
+# Clean temporary files
+make clean
+
+# Run Ansible installation
+make ansible-install
+```
+
+For a full list of available commands:
+```bash
+make help
+```
+
+---
+
+## License
+
+MIT
+
+---

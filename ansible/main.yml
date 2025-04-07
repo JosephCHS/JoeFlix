@@ -1,0 +1,34 @@
+---
+- name: Install all services
+  hosts: all
+  become: true
+  vars_files:
+    - group_vars/all.yml
+
+  pre_tasks:
+    - name: Include pre-tasks
+      ansible.builtin.include_tasks: tasks/pre_tasks.yml
+
+  tasks:
+    - name: Install media-related services
+      ansible.builtin.include_tasks:
+        file: tasks/install_services.yml
+      vars:
+        service_name: "{{ inventory_hostname }}"
+      when: inventory_hostname in [
+        'bazarr', 'calibre_web', 'flaresolverr', 'gotify', 'homepage', 'kavita',
+        'lidarr', 'overseerr', 'plex', 'prowlarr', 'qbittorrent', 'radarr',
+        'readarr', 'sonarr', 'tautulli']
+
+    - name: Install Proxmox services
+      ansible.builtin.include_role:
+        name: install_proxmox
+      when: inventory_hostname == 'proxmox'
+      tags: ['proxmox']
+
+  post_tasks:
+    - name: Verify services are running
+      ansible.builtin.systemd:
+        name: "{{ service_name }}"
+        state: started
+      when: service_name is defined

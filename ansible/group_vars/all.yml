@@ -1,0 +1,35 @@
+---
+# Common paths
+media_path: /mnt/hdd14/data/media
+download_path: /mnt/hdd14/data/downloads
+
+# Default user/group settings
+default_user: root
+default_group: root
+default_file_mode: '775'
+
+# Common package dependencies
+base_packages:
+  - curl
+  - sudo
+  - unzip
+  - python3
+  - python3-pip
+
+# Service ports (matching README)
+service_ports:
+  plex: 32400
+  radarr: 7878
+  sonarr: 8989
+  bazarr: 6767
+  lidarr: 8686
+  prowlarr: 9696
+  readarr: 8787
+  overseerr: 5055
+  flaresolverr: 8191
+  tautulli: 8181
+  calibre_web: 8083
+  kavita: 5000
+  qbittorrent: 8090
+  homepage: 3000
+  gotify: 8080
