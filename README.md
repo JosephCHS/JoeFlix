@@ -1,6 +1,6 @@
 # JoeFlix: Media Server Project on Proxmox
 
-JoeFlix is a self-hosted media server ecosystem designed to automate the deployment and management of multiple media-related services using Proxmox, Terraform, and Ansible. It integrates hardware transcoding, localized media, and a seamless user experience for both personal use and external sharing.
+JoeFlix is a self-hosted media server ecosystem designed to automate the deployment and management of multiple media-related services using Proxmox, OpenTofu, and Ansible. It integrates hardware transcoding, localized media, and a seamless user experience for both personal use and external sharing.
 
 ---
 
@@ -30,7 +30,7 @@ JoeFlix is a self-hosted media server ecosystem designed to automate the deploym
 
 ## Overview
 
-JoeFlix is built on **Proxmox Virtual Environment** to host a suite of media services, each running in its own lightweight LXC container. The stack leverages **Terraform** for infrastructure provisioning and **Ansible** for configuration management.
+JoeFlix is built on **Proxmox Virtual Environment** to host a suite of media services, each running in its own lightweight LXC container. The stack leverages **OpenTofu** for infrastructure provisioning and **Ansible** for configuration management.
 
 This project is designed with automation and maintainability in mind, ensuring efficient deployment and seamless updates for media libraries and services.
 
@@ -38,7 +38,7 @@ This project is designed with automation and maintainability in mind, ensuring e
 
 ## Features
 
-- **Automated Deployment**: Fully automated provisioning and configuration using Terraform and Ansible.
+- **Automated Deployment**: Fully automated provisioning and configuration using OpenTofu and Ansible.
 - **Hardware Transcoding**: Leverages Intel QSV for efficient media transcoding in Plex.
 - **Localized Media**: Supports French audio and subtitles for media files.
 - **Self-Contained Services**: Each service is hosted in its dedicated LXC container for isolation.
@@ -77,7 +77,7 @@ The services are hosted on the following containers with their respective IPs:
 ## Prerequisites
 
 1. **Proxmox VE** installed and configured.
-2. OpenTofu (Terraform fork) v1.9.0+ installed on your local machine.
+2. OpenTofu ( fork) v1.9.0+ installed on your local machine.
 3. Ansible installed on your local machine or control node.
 4. A server with (my current setup):
    - 14TB HDD for media storage.
