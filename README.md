@@ -18,7 +18,6 @@ JoeFlix is a self-hosted media server ecosystem designed to automate the deploym
     - [Infrastructure Deployment](#infrastructure-deployment)
     - [Service Ports](#service-ports)
   - [Storage Structure](#storage-structure)
-  - [Backup Strategy](#backup-strategy)
   - [Troubleshooting](#troubleshooting)
   - [Key Features](#key-features)
   - [Security](#security)
@@ -112,7 +111,7 @@ cd joeflix
 ```bash
 cd opentofu/joeflix_containers
 cp secrets.auto.tfvars.example secrets.auto.tfvars
-vim secrets.auto.tfvars  # Edit with your credentials
+nano secrets.auto.tfvars  # Edit with your credentials
 ```
 
 3. Deploy infrastructure:
@@ -164,18 +163,6 @@ ansible-playbook main.yml
     ├── tv/
     └── music/
 ```
-
----
-
-## Backup Strategy
-
-1. **Container Backups**:
-   - Weekly automated backups using Proxmox backup feature
-   - Retention: 4 weeks
-
-2. **Media Backups**:
-   - Important configuration files backed up daily
-   - Media files excluded from backup (too large)
 
 ---
 
