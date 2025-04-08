@@ -102,6 +102,7 @@ The services are hosted on the following containers with their respective IPs:
 ### Infrastructure Deployment
 
 1. Clone the repository:
+
 ```bash
 git clone https://github.com/yourusername/joeflix.git
 cd joeflix
@@ -230,6 +231,7 @@ Built with:
 ---
 
 ## Quick Start
+
 
 The project includes a Makefile for easy management. Here are the available commands:
 
